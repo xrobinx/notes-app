@@ -1,0 +1,115 @@
+.onboarding-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.onboarding-card {
+  width: min(440px, 100%);
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-popover);
+  box-shadow: var(--shadow-lg);
+}
+
+.onboarding-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: var(--accent-muted);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.onboarding-card h1 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 24px;
+}
+
+.onboarding-card p {
+  margin: 6px 0 20px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+.onboarding-label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.onboarding-label input {
+  height: 38px;
+  border: 1px solid #4b4b4f;
+  border-radius: 8px;
+  background: #2f2f31;
+  color: var(--text-primary);
+  padding: 0 11px;
+  outline: none;
+}
+
+:root[data-theme='light'] .onboarding-label input {
+  background: #ececf1;
+  border-color: #c7c7cc;
+}
+
+.onboarding-label input:focus {
+  border-color: var(--accent);
+}
+
+.onboarding-choice-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.onboarding-choice-row button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+}
+
+.onboarding-choice-row button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-muted);
+}
+
+.onboarding-primary {
+  width: 100%;
+  height: 40px;
+  margin-top: 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.onboarding-message {
+  margin-top: 10px;
+  color: var(--danger);
+  font-size: 12px;
+}

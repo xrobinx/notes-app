@@ -1,0 +1,94 @@
+{
+  "name": "notes-app",
+  "version": "1.0.0",
+  "description": "A beautiful notes app for Windows",
+  "author": "Notes App",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xrobinx/notes-app.git"
+  },
+  "homepage": "https://github.com/xrobinx/notes-app",
+  "bugs": {
+    "url": "https://github.com/xrobinx/notes-app/issues"
+  },
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "dist": "npm run build && electron-builder",
+    "rebuild": "electron-rebuild -f -w better-sqlite3"
+  },
+  "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
+    "@tiptap/extension-blockquote": "^2.11.7",
+    "@tiptap/extension-character-count": "^2.11.7",
+    "@tiptap/extension-code-block-lowlight": "^2.11.7",
+    "@tiptap/extension-color": "^2.11.7",
+    "@tiptap/extension-highlight": "^2.11.7",
+    "@tiptap/extension-horizontal-rule": "^2.11.7",
+    "@tiptap/extension-image": "^2.11.7",
+    "@tiptap/extension-link": "^2.11.7",
+    "@tiptap/extension-placeholder": "^2.11.7",
+    "@tiptap/extension-table": "^2.11.7",
+    "@tiptap/extension-table-cell": "^2.11.7",
+    "@tiptap/extension-table-header": "^2.11.7",
+    "@tiptap/extension-table-row": "^2.11.7",
+    "@tiptap/extension-task-item": "^2.11.7",
+    "@tiptap/extension-task-list": "^2.11.7",
+    "@tiptap/extension-text-style": "^2.11.7",
+    "@tiptap/extension-typography": "^2.11.7",
+    "@tiptap/extension-underline": "^2.11.7",
+    "@tiptap/html": "^2.11.7",
+    "@tiptap/pm": "^2.11.7",
+    "@tiptap/react": "^2.11.7",
+    "@tiptap/starter-kit": "^2.11.7",
+    "better-sqlite3": "^11.9.1",
+    "date-fns": "^4.1.0",
+    "electron-updater": "^6.8.3",
+    "emoji-mart": "^5.6.0",
+    "googleapis": "^171.4.0",
+    "lowlight": "^3.3.0",
+    "lucide-react": "^0.475.0",
+    "mammoth": "^1.12.0",
+    "turndown": "^7.2.4",
+    "uuid": "^11.1.0",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.7.1",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.15.3",
+    "@types/turndown": "^5.0.6",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^4.4.1",
+    "autoprefixer": "^10.4.21",
+    "electron": "^34.3.0",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^3.1.0",
+    "postcss": "^8.5.3",
+    "typescript": "^5.7.3",
+    "vite": "^6.3.5"
+  },
+  "build": {
+    "appId": "com.notesapp.windows",
+    "productName": "Notes",
+    "win": {
+      "target": "nsis",
+      "icon": "resources/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Notes"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "xrobinx",
+      "repo": "notes-app"
+    }
+  }
+}

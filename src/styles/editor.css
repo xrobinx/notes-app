@@ -1,0 +1,421 @@
+/* TipTap Editor Styles */
+.tiptap {
+  flex: 1;
+  padding: 24px 32px;
+  outline: none;
+  min-height: 55vh;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+}
+
+.tiptap::after {
+  content: '';
+  display: block;
+  height: 45vh;
+}
+
+.tiptap p { margin-bottom: 0.5em; }
+.tiptap p:last-child { margin-bottom: 0; }
+
+/* Headings */
+.tiptap h1 { font-size: 2em; font-weight: 700; margin: 0.4em 0; }
+.tiptap h2 { font-size: 1.5em; font-weight: 700; margin: 0.4em 0; }
+.tiptap h3 { font-size: 1.25em; font-weight: 600; margin: 0.4em 0; }
+.tiptap h4 { font-size: 1.1em; font-weight: 600; margin: 0.4em 0; }
+.tiptap h5 { font-size: 1em; font-weight: 600; margin: 0.4em 0; }
+.tiptap h6 { font-size: 0.875em; font-weight: 600; margin: 0.4em 0; }
+
+/* Lists */
+.tiptap ul, .tiptap ol { padding-left: 1.5em; margin: 0.4em 0; }
+.tiptap li { margin: 0.2em 0; }
+
+/* Blockquote */
+.tiptap blockquote {
+  border-left: 3px solid var(--accent);
+  margin: 0.8em 0;
+  padding: 0.4em 0 0.4em 1em;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Horizontal rule */
+.tiptap hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1em 0;
+}
+
+/* Links */
+.tiptap a {
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Code inline */
+.tiptap code {
+  background: var(--bg-input);
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 0.875em;
+  color: var(--accent);
+}
+
+/* Code block */
+.tiptap pre {
+  background: #14141b;
+  border-radius: 8px;
+  margin: 0.8em 0;
+  padding: 0;
+  overflow: hidden;
+}
+.tiptap pre code {
+  display: block;
+  padding: 16px;
+  background: transparent;
+  color: #e2e8f0;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-x: auto;
+  white-space: pre;
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+}
+
+/* Syntax highlight colors (lowlight) */
+.tiptap pre .hljs-keyword { color: #c792ea; font-style: italic; }
+.tiptap pre .hljs-string { color: #c3e88d; }
+.tiptap pre .hljs-comment { color: #546e7a; font-style: italic; }
+.tiptap pre .hljs-function { color: #82aaff; }
+.tiptap pre .hljs-number { color: #f78c6c; }
+.tiptap pre .hljs-variable { color: #eeffff; }
+.tiptap pre .hljs-title { color: #82aaff; }
+.tiptap pre .hljs-type { color: #ffcb6b; }
+.tiptap pre .hljs-built_in { color: #89ddff; }
+.tiptap pre .hljs-attr { color: #f07178; }
+.tiptap pre .hljs-selector-tag { color: #f07178; }
+.tiptap pre .hljs-selector-class { color: #ffcb6b; }
+.tiptap pre .hljs-operator { color: #89ddff; }
+.tiptap pre .hljs-literal { color: #ff5370; }
+.tiptap pre .hljs-meta { color: #89ddff; }
+.tiptap pre .hljs-punctuation { color: #89ddff; }
+.tiptap pre .hljs-tag { color: #f07178; }
+
+/* Checklist */
+.tiptap ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0;
+}
+.tiptap ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 4px 0;
+}
+.tiptap ul[data-type='taskList'] li > label {
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.tiptap ul[data-type='taskList'] li > label input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  appearance: none;
+  background: transparent;
+  transition: all 0.15s;
+}
+.tiptap ul[data-type='taskList'] li > label input[type='checkbox']:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.tiptap ul[data-type='taskList'] li > label input[type='checkbox']:checked::after {
+  content: '✓';
+  display: block;
+  color: var(--text-on-accent);
+  font-size: 11px;
+  line-height: 12px;
+  text-align: center;
+  font-weight: 700;
+}
+.tiptap ul[data-type='taskList'] li[data-checked='true'] > div {
+  text-decoration: line-through;
+  color: var(--text-tertiary);
+}
+
+/* Tables */
+.tiptap table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.8em 0;
+  table-layout: fixed;
+}
+.tiptap table td, .tiptap table th {
+  border: 1px solid color-mix(in srgb, var(--text-tertiary), transparent 35%);
+  padding: 8px 12px;
+  min-width: 60px;
+  vertical-align: top;
+  position: relative;
+}
+.tiptap table th {
+  background: transparent;
+  font-weight: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+.tiptap table .selectedCell {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-tertiary), transparent 30%);
+}
+.tiptap table .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: transparent;
+  cursor: col-resize;
+  opacity: 0;
+  transition: none;
+}
+.tiptap table:hover .column-resize-handle {
+  opacity: 0;
+}
+
+/* Images */
+.tiptap img {
+  max-width: 100%;
+  border-radius: 6px;
+  display: block;
+  margin: 0.5em 0;
+}
+.tiptap img.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  border-radius: 6px;
+}
+
+.resizable-image {
+  display: block;
+  margin: 0.7em auto;
+  max-width: 100%;
+  position: relative;
+}
+
+.resizable-image.align-left {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.resizable-image.align-center {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.resizable-image.align-right {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+.resizable-image img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+}
+
+.resizable-image.is-selected img {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.image-align-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-popover);
+  box-shadow: var(--shadow-sm);
+}
+
+.image-align-controls button {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-align-controls button:hover {
+  background: var(--bg-card-hover);
+  color: var(--accent);
+}
+
+.image-resize-handle {
+  position: absolute;
+  top: 50%;
+  width: 9px;
+  height: 44px;
+  transform: translateY(-50%);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent);
+  cursor: ew-resize;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.resizable-image.is-selected .image-resize-handle,
+.resizable-image:hover .image-resize-handle {
+  opacity: 1;
+}
+
+.image-resize-handle--left {
+  left: -5px;
+}
+
+.image-resize-handle--right {
+  right: -5px;
+}
+
+.file-attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: min(100%, 360px);
+  margin: 0.7em 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  position: relative;
+}
+
+.file-attachment-delete {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+}
+
+.file-attachment:hover .file-attachment-delete {
+  opacity: 1;
+}
+
+.file-attachment-delete:hover {
+  background: var(--bg-card-hover);
+  color: var(--danger);
+}
+
+.file-attachment:hover,
+.file-attachment.is-selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent), transparent 88%);
+}
+
+.file-attachment-icon {
+  color: var(--accent);
+  display: flex;
+  flex-shrink: 0;
+}
+
+.file-attachment-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.file-attachment-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.file-attachment-meta {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.file-attachment-confirm {
+  position: absolute;
+  right: 8px;
+  top: calc(100% + 6px);
+  z-index: 20;
+  min-width: 190px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-popover);
+  box-shadow: var(--shadow-lg);
+  display: grid;
+  gap: 6px;
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: default;
+}
+
+.file-attachment-confirm button {
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: var(--danger);
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.file-attachment-confirm button.secondary {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+/* Placeholder */
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--text-tertiary);
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+/* Selection */
+.tiptap ::selection {
+  background: rgba(142, 142, 147, 0.45);
+  color: inherit;
+}
+
+/* Highlight marks */
+mark { border-radius: 3px; padding: 1px 2px; }
+
+.search-result-highlight {
+  background: rgba(255, 214, 10, 0.34);
+  color: inherit;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(255, 214, 10, 0.14);
+}

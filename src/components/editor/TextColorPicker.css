@@ -1,0 +1,85 @@
+.text-color-picker {
+  width: 220px;
+  padding: 12px;
+  background: var(--bg-popover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+}
+
+.text-color-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+
+.text-color-presets {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.text-color-swatch {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.text-color-swatch.selected {
+  box-shadow: 0 0 0 2px var(--bg-popover), 0 0 0 4px var(--accent);
+}
+
+.text-color-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.text-color-input {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  padding: 0;
+}
+
+.text-color-custom-label {
+  flex: 1;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.text-color-apply-btn {
+  border: none;
+  border-radius: 7px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+}
+
+.text-color-clear-btn {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.text-color-clear-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--accent);
+}

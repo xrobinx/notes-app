@@ -1,0 +1,343 @@
+.desktop-widget {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #2c2c2e;
+  border: 1px solid #48484d;
+  border-radius: 13px;
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.42);
+}
+
+.widget-header {
+  height: 38px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 0 9px 0 13px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #252527;
+  flex-shrink: 0;
+}
+
+.widget-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.widget-title span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-title svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.widget-mode-tabs {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.widget-mode-tabs button,
+.widget-close,
+.widget-checkbox-button,
+.widget-small-icon,
+.widget-item-toggle,
+.widget-item-delete {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.widget-mode-tabs button {
+  width: 25px;
+  height: 25px;
+  border-radius: 7px;
+}
+
+.widget-mode-tabs button:hover,
+.widget-mode-tabs button.active {
+  background: rgba(255, 214, 10, 0.14);
+  color: var(--accent);
+}
+
+.widget-close {
+  width: 25px;
+  height: 25px;
+  border-radius: 7px;
+}
+
+.widget-close:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-primary);
+}
+
+.widget-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 12px;
+}
+
+.widget-surface {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 11px;
+  background: #262628;
+}
+
+.widget-note-surface {
+  border-color: rgba(255, 214, 10, 0.22);
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    #262628;
+  background-size: 100% 30px;
+}
+
+.widget-note-input {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: none;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.55;
+  outline: none;
+  resize: none;
+  padding: 14px;
+}
+
+.widget-note-input::placeholder,
+.widget-entry-row input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.widget-entry-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 7px;
+  padding: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.widget-entry-row input {
+  min-width: 0;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  background: #202022;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  padding: 0 10px;
+}
+
+.widget-entry-row input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(255, 214, 10, 0.18);
+}
+
+.widget-checkbox-button {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: rgba(255, 214, 10, 0.12);
+  color: var(--accent);
+}
+
+.widget-checkbox-button:hover {
+  background: rgba(255, 214, 10, 0.18);
+}
+
+.reminder-entry {
+  grid-template-columns: 34px 1fr;
+}
+
+.widget-list {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+.widget-check-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text-primary);
+  padding: 8px 8px;
+  text-align: left;
+}
+
+.widget-check-item:hover {
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.widget-item-toggle {
+  width: 17px;
+  height: 17px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--text-on-accent);
+  flex-shrink: 0;
+}
+
+.widget-check-item.done .widget-item-toggle {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.widget-check-item em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: normal;
+  font-size: 12px;
+}
+
+.widget-item-edit {
+  min-width: 0;
+  width: 100%;
+  height: 26px;
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  background: #202022;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+  padding: 0 8px;
+}
+
+.widget-check-item.done em {
+  text-decoration: line-through;
+  color: var(--text-tertiary);
+}
+
+.widget-check-item strong {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.widget-item-delete {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  opacity: 0;
+}
+
+.widget-check-item:hover .widget-item-delete,
+.widget-item-delete:focus-visible {
+  opacity: 1;
+}
+
+.widget-item-delete:hover {
+  background: rgba(255, 69, 58, 0.14);
+  color: #ff6961;
+}
+
+.widget-reminder-popover {
+  position: absolute;
+  top: 50px;
+  left: 10px;
+  right: 10px;
+  z-index: 5;
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid rgba(255, 214, 10, 0.28);
+  border-radius: 12px;
+  background: #343436;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+}
+
+.widget-popover-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.widget-popover-title svg {
+  color: var(--accent);
+}
+
+.widget-reminder-popover label {
+  display: grid;
+  gap: 5px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.widget-reminder-popover input {
+  height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: #242426;
+  color: var(--text-primary);
+  color-scheme: dark;
+  font: inherit;
+  outline: none;
+  padding: 0 9px;
+}
+
+.widget-reminder-popover input:focus {
+  border-color: var(--accent);
+}
+
+.widget-reminder-popover button {
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}

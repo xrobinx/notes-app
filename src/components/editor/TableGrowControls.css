@@ -1,0 +1,51 @@
+.table-grow-layer {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+}
+
+.table-grow-control {
+  pointer-events: auto;
+  position: absolute;
+  border: 1px solid color-mix(in srgb, var(--text-tertiary), transparent 35%);
+  background: color-mix(in srgb, var(--bg-input), transparent 12%);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  box-sizing: border-box;
+}
+
+.table-grow-control:hover {
+  opacity: 0;
+}
+
+.table-grow-control.is-previewed {
+  opacity: 0.24;
+}
+
+.table-grow-control.is-armed {
+  opacity: 0.9;
+  background: color-mix(in srgb, var(--bg-input), white 6%);
+  color: var(--text-primary);
+}
+
+.table-grow-control svg {
+  opacity: 0;
+}
+
+.table-grow-control.is-armed svg {
+  opacity: 1;
+}
+
+.table-grow-control--column {
+  width: 18px;
+}
+
+.table-grow-control--row {
+  height: 18px;
+}

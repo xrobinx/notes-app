@@ -1,0 +1,49 @@
+/* TitleBar */
+.titlebar {
+  height: 38px;
+  background: var(--bg-sidebar);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 12px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  z-index: 100;
+}
+
+.titlebar-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Apple traffic light buttons */
+.traffic-btn {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: filter 0.1s;
+  flex-shrink: 0;
+}
+.traffic-btn:hover { filter: brightness(0.85); }
+.traffic-btn:active { filter: brightness(0.7); }
+
+.traffic-close { background: #ff5f57; }
+.traffic-minimize { background: #febc2e; }
+.traffic-maximize { background: #28c840; }
+
+.traffic-icon {
+  font-size: 8px;
+  line-height: 1;
+  color: rgba(0,0,0,0.6);
+  font-weight: 700;
+  pointer-events: none;
+  position: absolute;
+}

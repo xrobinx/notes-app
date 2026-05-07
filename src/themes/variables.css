@@ -1,0 +1,88 @@
+/* ===== LIGHT THEME ===== */
+:root[data-theme='light'] {
+  --bg-app: #f2f2f7;
+  --bg-sidebar: #e8e8ed;
+  --bg-note-list: #f2f2f7;
+  --bg-editor: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f5f5f5;
+  --bg-card-active: #fffbe6;
+  --bg-modal: #ffffff;
+  --bg-input: #f0f0f5;
+  --bg-toolbar: #ffffff;
+  --bg-popover: #ffffff;
+
+  --text-primary: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #aeaeb2;
+  --text-accent: #f5a623;
+  --text-on-accent: #ffffff;
+
+  --border: #d2d2d7;
+  --border-light: #e5e5ea;
+  --divider: #e5e5ea;
+
+  --accent: #f5a623;
+  --accent-hover: #e09518;
+  --accent-muted: rgba(245, 166, 35, 0.15);
+
+  --danger: #ff3b30;
+  --success: #34c759;
+  --warning: #ff9500;
+
+  --scrollbar-thumb: rgba(0,0,0,0.2);
+  --scrollbar-track: transparent;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.16);
+
+  --titlebar-bg: #e8e8ed;
+  --resize-handle: rgba(0,0,0,0.08);
+  --pin-color: #f5a623;
+}
+
+/* ===== DARK THEME (default) ===== */
+:root[data-theme='dark'],
+:root:not([data-theme]) {
+  --bg-app: #1c1c1e;
+  --bg-sidebar: #1c1c1e;
+  --bg-note-list: #232323;
+  --bg-editor: #2c2c2e;
+  --bg-card: #2c2c2e;
+  --bg-card-hover: #363638;
+  --bg-card-active: #3a3420;
+  --bg-modal: #2c2c2e;
+  --bg-input: #3a3a3c;
+  --bg-toolbar: #2c2c2e;
+  --bg-popover: #3a3a3c;
+
+  --text-primary: #f5f5f7;
+  --text-secondary: #98989f;
+  --text-tertiary: #636366;
+  --text-accent: #ffd60a;
+  --text-on-accent: #1c1c1e;
+
+  --border: #3a3a3c;
+  --border-light: #2c2c2e;
+  --divider: #38383a;
+
+  --accent: #ffd60a;
+  --accent-hover: #e6c000;
+  --accent-muted: rgba(255, 214, 10, 0.15);
+
+  --danger: #ff453a;
+  --success: #32d74b;
+  --warning: #ff9f0a;
+
+  --scrollbar-thumb: rgba(255,255,255,0.15);
+  --scrollbar-track: transparent;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 20px rgba(0,0,0,0.36);
+
+  --titlebar-bg: #1c1c1e;
+  --resize-handle: rgba(255,255,255,0.06);
+  --pin-color: #ffd60a;
+}

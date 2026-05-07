@@ -1,0 +1,43 @@
+.table-grid-popup {
+  background: var(--bg-popover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: var(--shadow-lg);
+  user-select: none;
+  width: max-content;
+}
+
+.table-grid-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 8px;
+  height: 16px;
+}
+
+.table-grid-cells {
+  display: grid;
+  grid-template-columns: repeat(8, 20px);
+  gap: 3px;
+}
+
+.table-grid-cell {
+  width: 20px;
+  height: 20px;
+  border: 1px solid color-mix(in srgb, var(--text-tertiary), transparent 25%);
+  border-radius: 3px;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--bg-input), white 4%);
+  transition: background 0.05s, border-color 0.05s;
+}
+
+.table-grid-cell.highlighted {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.table-grid-cell:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}

@@ -1,0 +1,108 @@
+.tiptap-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.tiptap-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.editor-inline-search {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 5px 18px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-editor), var(--bg-toolbar) 45%);
+  color: var(--text-tertiary);
+}
+
+.editor-inline-search input {
+  min-width: 0;
+  height: 24px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  outline: none;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.editor-inline-search input:focus {
+  border-color: var(--accent);
+}
+
+.editor-inline-search span {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.editor-inline-search button {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: color-mix(in srgb, var(--text-primary), transparent 32%);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.editor-inline-search button:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+  color: var(--accent);
+}
+
+.editor-inline-search button:disabled {
+  color: color-mix(in srgb, var(--text-tertiary), transparent 48%);
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.editor-inline-search .search-nav-button:not(:disabled) {
+  background: color-mix(in srgb, var(--bg-input), var(--text-primary) 6%);
+}
+
+.tiptap-content .tiptap {
+  flex: 1;
+}
+
+.editor-stats-footer {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 20px;
+  border-top: 1px solid var(--border);
+  color: var(--text-tertiary);
+  font-size: 11px;
+  opacity: 0.45;
+  transition: opacity 0.14s ease;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.editor-stats-footer:hover,
+.editor-stats-footer.is-visible {
+  opacity: 1;
+}
+
+.editor-stats-footer span {
+  flex-shrink: 0;
+}
+
+.editor-stats-footer .grammar-hint {
+  color: var(--accent);
+}
