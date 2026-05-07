@@ -59,6 +59,9 @@ export interface ElectronAPI {
     open: (type: 'all' | 'note' | 'todo' | 'reminder') => Promise<void>
     scheduleReminder: (reminder: { id: string; text: string; dueAt: string }) => Promise<{ ok: boolean; error?: string }>
   }
+  language: {
+    refreshSpellchecker: () => Promise<void>
+  }
   // File operations
   files: {
     saveAttachment: (noteId: string, buffer: ArrayBuffer, filename: string) => Promise<string>

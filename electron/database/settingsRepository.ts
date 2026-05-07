@@ -27,6 +27,7 @@ const DEFAULTS: Settings = {
   showEditorStats: false,
   spellcheckEnabled: true,
   grammarHintsEnabled: true,
+  translationLanguage: 'ms',
   shortcuts: DEFAULT_SHORTCUTS,
   openWidgets: [],
   widgetBounds: {}

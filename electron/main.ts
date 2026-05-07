@@ -10,6 +10,7 @@ import { closeDb } from './database/db'
 import { emptyOldTrash } from './database/notesRepository'
 import { getSettings, setSetting } from './database/settingsRepository'
 import { scheduleAutoSync } from './sync/driveSync'
+import { getTranslationLanguage } from '../src/utils/languages'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -20,6 +21,63 @@ let restoredWidgetsOnLaunch = false
 
 type WidgetType = 'all' | 'note' | 'todo' | 'reminder'
 const widgetTypes: WidgetType[] = ['all', 'note', 'todo', 'reminder']
+
+function levenshteinDistance(a: string, b: string): number {
+  const source = a.toLowerCase()
+  const target = b.toLowerCase()
+  const matrix = Array.from({ length: source.length + 1 }, (_, index) => [index])
+  for (let column = 1; column <= target.length; column += 1) matrix[0][column] = column
+  for (let row = 1; row <= source.length; row += 1) {
+    for (let column = 1; column <= target.length; column += 1) {
+      const cost = source[row - 1] === target[column - 1] ? 0 : 1
+      matrix[row][column] = Math.min(
+        matrix[row - 1][column] + 1,
+        matrix[row][column - 1] + 1,
+        matrix[row - 1][column - 1] + cost,
+      )
+    }
+  }
+  return matrix[source.length][target.length]
+}
+
+function sortSpellSuggestions(word: string, suggestions: string[]): string[] {
+  return [...new Set(suggestions)].sort((a, b) => {
+    const aPrefix = a.toLowerCase().startsWith(word.slice(0, 2).toLowerCase()) ? 0 : 1
+    const bPrefix = b.toLowerCase().startsWith(word.slice(0, 2).toLowerCase()) ? 0 : 1
+    if (aPrefix !== bPrefix) return aPrefix - bPrefix
+    return levenshteinDistance(word, a) - levenshteinDistance(word, b)
+  })
+}
+
+async function translateText(text: string, targetLanguage: string): Promise<string> {
+  const url = new URL('https://translate.googleapis.com/translate_a/single')
+  url.searchParams.set('client', 'gtx')
+  url.searchParams.set('sl', 'auto')
+  url.searchParams.set('tl', targetLanguage)
+  url.searchParams.set('dt', 't')
+  url.searchParams.set('q', text)
+  const response = await fetch(url)
+  if (!response.ok) throw new Error(`Translation failed: ${response.status}`)
+  const data = await response.json() as unknown
+  if (!Array.isArray(data) || !Array.isArray(data[0])) throw new Error('Translation response was not understood.')
+  return data[0]
+    .map((part: unknown) => Array.isArray(part) && typeof part[0] === 'string' ? part[0] : '')
+    .join('')
+    .trim()
+}
+
+function configureSpellchecker(): void {
+  const settings = getSettings()
+  const language = getTranslationLanguage(settings.translationLanguage)
+  const languages = Array.from(new Set(['en-US', language.spellcheck].filter(Boolean)))
+  for (const window of BrowserWindow.getAllWindows()) {
+    try {
+      window.webContents.session.setSpellCheckerLanguages(languages)
+    } catch {
+      try { window.webContents.session.setSpellCheckerLanguages(['en-US']) } catch { /* ignore */ }
+    }
+  }
+}
 
 function loadRenderer(window: BrowserWindow, widget?: WidgetType): void {
   if (process.env['ELECTRON_RENDERER_URL']) {
@@ -52,13 +110,37 @@ function createWindow(): void {
   })
 
   mainWindow.webContents.on('context-menu', (_event, params) => {
-    if (!params.isEditable || params.misspelledWord.length === 0) return
-    const template: Electron.MenuItemConstructorOptions[] = params.dictionarySuggestions.slice(0, 6).map(suggestion => ({
+    if (!params.isEditable) return
+    const settings = getSettings()
+    const targetLanguage = getTranslationLanguage(settings.translationLanguage)
+    const selectedText = params.selectionText.trim()
+    const template: Electron.MenuItemConstructorOptions[] = sortSpellSuggestions(params.misspelledWord, params.dictionarySuggestions)
+      .slice(0, 6)
+      .map(suggestion => ({
       label: suggestion,
       click: () => mainWindow?.webContents.replaceMisspelling(suggestion),
     }))
-    if (template.length > 0) template.push({ type: 'separator' })
-    template.push({ label: 'Add to dictionary', click: () => mainWindow?.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord) })
+    if (params.misspelledWord.length > 0) {
+      if (template.length === 0) template.push({ label: 'No spelling suggestions', enabled: false })
+      template.push({ label: 'Add to dictionary', click: () => mainWindow?.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord) })
+    }
+    if (selectedText) {
+      if (template.length > 0) template.push({ type: 'separator' })
+      template.push({
+        label: `Translate selection to ${targetLanguage.label}`,
+        click: async () => {
+          try {
+            const translated = await translateText(selectedText, targetLanguage.code)
+            await mainWindow?.webContents.executeJavaScript(
+              `document.execCommand('insertText', false, ${JSON.stringify(translated)})`
+            )
+          } catch {
+            mainWindow?.webContents.send('update:status', 'Translation failed. Check your internet connection.')
+          }
+        },
+      })
+    }
+    if (template.length === 0) return
     Menu.buildFromTemplate(template).popup()
   })
 
@@ -78,6 +160,7 @@ function createWindow(): void {
   })
 
   loadRenderer(mainWindow)
+  configureSpellchecker()
 }
 
 function openWidget(type: WidgetType): void {
@@ -143,6 +226,7 @@ function openWidget(type: WidgetType): void {
     if (!appIsQuitting) persistOpenWidgets()
   })
   loadRenderer(widgetWindow, type)
+  configureSpellchecker()
 }
 
 function persistOpenWidgets(): void {
@@ -218,6 +302,7 @@ ipcMain.on('window:close-current', event => {
 })
 ipcMain.handle('window:is-maximized', () => mainWindow?.isMaximized() ?? false)
 ipcMain.handle('widgets:open', (_event, type: WidgetType) => openWidget(type))
+ipcMain.handle('language:refresh-spellchecker', () => configureSpellchecker())
 ipcMain.handle('widgets:schedule-reminder', (_event, reminder: { id: string; text: string; dueAt: string }) => {
   const dueTime = new Date(reminder.dueAt).getTime()
   const delay = dueTime - Date.now()

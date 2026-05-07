@@ -67,6 +67,7 @@ export interface Settings {
   showEditorStats: boolean
   spellcheckEnabled: boolean
   grammarHintsEnabled: boolean
+  translationLanguage: string
   shortcuts: Record<string, string>
   openWidgets: ('all' | 'note' | 'todo' | 'reminder')[]
   widgetBounds: Record<string, { x?: number; y?: number; width: number; height: number }>

@@ -4,13 +4,14 @@ import {
   Bold, Italic, Underline, Strikethrough,
   List, ListOrdered, CheckSquare, Quote,
   Code, Minus, Link2, Image, Paperclip,
-  Highlighter, Palette, Table2, ChevronDown, Search
+  Highlighter, Palette, Table2, ChevronDown, Search, Languages
 } from 'lucide-react'
 import { TableGrid } from './TableGrid'
 import { HighlightPicker } from './HighlightPicker'
 import { TextColorPicker } from './TextColorPicker'
 import { useSettingsStore } from '../../store/settingsStore'
 import { comboMatchesEvent, getShortcut, shortcutTitle } from '../../utils/shortcuts'
+import { TRANSLATION_LANGUAGES } from '../../utils/languages'
 import './Toolbar.css'
 
 interface Props {
@@ -73,6 +74,11 @@ export function Toolbar({ editor, noteId, searchOpen, onToggleSearch }: Props) {
   const clearTextColor = () => {
     editor.chain().focus().unsetColor().run()
     setPopover(null)
+  }
+
+  const setTranslationLanguage = async (language: string) => {
+    await settings.setSetting('translationLanguage', language)
+    await window.api.language.refreshSpellchecker()
   }
 
   const applyCurrentHighlight = () => {
@@ -233,6 +239,18 @@ export function Toolbar({ editor, noteId, searchOpen, onToggleSearch }: Props) {
               <div className="popover-overlay" onClick={() => setPopover(null)} />
             </>
           )}
+        </div>
+        <div className="toolbar-language-picker" title="Translate right-click target language">
+          <Languages size={13} />
+          <select
+            value={settings.translationLanguage}
+            onChange={event => void setTranslationLanguage(event.target.value)}
+            aria-label="Translate language"
+          >
+            {TRANSLATION_LANGUAGES.map(language => (
+              <option key={language.code} value={language.code}>{language.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 

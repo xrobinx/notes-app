@@ -57,6 +57,9 @@ contextBridge.exposeInMainWorld('api', {
     scheduleReminder: (reminder: { id: string; text: string; dueAt: string }) =>
       ipcRenderer.invoke('widgets:schedule-reminder', reminder)
   },
+  language: {
+    refreshSpellchecker: () => ipcRenderer.invoke('language:refresh-spellchecker')
+  },
   files: {
     saveAttachment: (noteId: string, buffer: ArrayBuffer, filename: string) =>
       ipcRenderer.invoke('files:save-attachment', noteId, buffer, filename),

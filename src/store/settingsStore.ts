@@ -37,6 +37,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   showEditorStats: false,
   spellcheckEnabled: true,
   grammarHintsEnabled: true,
+  translationLanguage: 'ms',
   shortcuts: DEFAULT_SHORTCUTS,
   openWidgets: [],
   widgetBounds: {},
