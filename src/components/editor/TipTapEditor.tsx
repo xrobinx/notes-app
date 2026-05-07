@@ -10,6 +10,7 @@ import { useNotesStore } from '../../store/notesStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import type { Note } from '../../types'
 import { comboMatchesEvent, getShortcut } from '../../utils/shortcuts'
+import { getTranslationLanguage } from '../../utils/languages'
 import '../../styles/editor.css'
 import './TipTapEditor.css'
 
@@ -213,16 +214,18 @@ export function TipTapEditor({ note, searchQuery }: Props) {
 
   useEffect(() => {
     if (!editor) return
+    const language = getTranslationLanguage(settings.translationLanguage)
     editor.setOptions({
       editorProps: {
         ...editor.options.editorProps,
         attributes: {
           class: 'tiptap',
+          lang: language.spellcheck,
           spellCheck: settings.spellcheckEnabled ? 'true' : 'false',
         },
       },
     })
-  }, [editor, settings.spellcheckEnabled])
+  }, [editor, settings.spellcheckEnabled, settings.translationLanguage])
 
   useEffect(() => {
     setStatsVisible(settings.showEditorStats)
