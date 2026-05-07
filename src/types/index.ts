@@ -2,6 +2,7 @@ export interface Note {
   id: string
   title: string
   body: string // TipTap JSON stringified
+  bodyLoaded?: boolean
   plainText: string
   emoji: string
   folderId: string | null

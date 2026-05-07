@@ -102,7 +102,17 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   selectNote: (id) => {
     set({ selectedNoteId: id })
-    if (id) window.api.settings.set('lastOpenNoteId', id)
+    if (!id) return
+    window.api.settings.set('lastOpenNoteId', id)
+    const existing = get().notes.find(note => note.id === id)
+    if (existing?.bodyLoaded === false) {
+      void window.api.notes.get(id).then(fullNote => {
+        if (!fullNote) return
+        set(s => ({
+          notes: s.notes.map(note => note.id === id ? { ...fullNote, bodyLoaded: true } : note)
+        }))
+      })
+    }
   },
 
   pinNote: async (id, pinned) => {

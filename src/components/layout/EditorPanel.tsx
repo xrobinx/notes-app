@@ -96,6 +96,17 @@ export function EditorPanel({ searchQuery }: { searchQuery: string }) {
     )
   }
 
+  if (note.bodyLoaded === false) {
+    return (
+      <div className="editor-panel editor-empty">
+        <div className="editor-empty-state">
+          <span style={{ fontSize: 28 }}>{note.emoji}</span>
+          <p>Opening note...</p>
+        </div>
+      </div>
+    )
+  }
+
   const isLocked = note.isLocked === 1 && !unlockedNoteIds.includes(note.id)
 
   const tryUnlock = async (passcode: string) => {

@@ -78,8 +78,10 @@ export function NoteList({ collapsed, onToggle, onSearchCleared, onSearchResultO
 
   const exportNotePdf = async (note: Note) => {
     try {
-      const html = generateHTML(JSON.parse(note.body), editorExtensions)
-      await window.api.files.exportNotePdf(note.title, note.emoji, html)
+      const fullNote = note.bodyLoaded === false ? await window.api.notes.get(note.id) : note
+      if (!fullNote) return
+      const html = generateHTML(JSON.parse(fullNote.body), editorExtensions)
+      await window.api.files.exportNotePdf(fullNote.title, fullNote.emoji, html)
     } catch {
       alert('Could not export this note as PDF.')
     }

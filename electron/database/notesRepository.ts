@@ -5,6 +5,30 @@ import type { Note } from '../../src/types/index'
 import { getRandomEmoji } from '../utils/emoji'
 import { verifyGlobalPasscode } from './settingsRepository'
 
+const EMPTY_DOC_BODY = JSON.stringify({
+  type: 'doc',
+  content: [{ type: 'paragraph' }]
+})
+
+const NOTE_SUMMARY_COLUMNS = `
+  notes.id,
+  notes.title,
+  ? AS body,
+  notes.plain_text,
+  notes.emoji,
+  notes.folder_id,
+  notes.is_pinned,
+  notes.is_locked,
+  notes.lock_password_hash,
+  notes.tags,
+  notes.created_at,
+  notes.updated_at,
+  notes.deleted_at,
+  notes.sync_status,
+  notes.sort_order,
+  0 AS body_loaded
+`
+
 function extractTags(value: string): string[] {
   const matches = value.match(/(^|\s)#([\p{L}\p{N}_-]{2,40})/gu) ?? []
   return Array.from(new Set(matches.map(tag => tag.trim().slice(1).toLowerCase())))
@@ -30,6 +54,7 @@ function row2note(row: Record<string, unknown>): Note {
     id: row.id as string,
     title: row.title as string,
     body: row.body as string,
+    bodyLoaded: row.body_loaded === undefined ? true : Boolean(row.body_loaded),
     plainText: row.plain_text as string,
     emoji: row.emoji as string,
     folderId: row.folder_id as string | null,
@@ -100,15 +125,10 @@ export function createNote(folderId?: string | null): Note {
   const id = randomUUID()
   const now = new Date().toISOString()
   const emoji = getRandomEmoji()
-  const emptyBody = JSON.stringify({
-    type: 'doc',
-    content: [{ type: 'paragraph' }]
-  })
-
   db.prepare(`
     INSERT INTO notes (id, title, body, plain_text, emoji, folder_id, original_folder_id, created_at, updated_at, sort_order)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, 'New Note', emptyBody, '', emoji, folderId ?? null, folderId ?? null, now, now, Date.now())
+  `).run(id, 'New Note', EMPTY_DOC_BODY, '', emoji, folderId ?? null, folderId ?? null, now, now, Date.now())
 
   return row2note(db.prepare('SELECT * FROM notes WHERE id = ?').get(id) as Record<string, unknown>)
 }
@@ -118,40 +138,40 @@ export function listNotes(folderId?: string | null): Note[] {
   let rows: unknown[]
   if (folderId === 'pinned') {
     rows = db.prepare(`
-      SELECT * FROM notes WHERE deleted_at IS NULL AND is_pinned = 1
+      SELECT ${NOTE_SUMMARY_COLUMNS} FROM notes WHERE deleted_at IS NULL AND is_pinned = 1
       ORDER BY sort_order ASC, updated_at DESC
-    `).all()
+    `).all(EMPTY_DOC_BODY)
   } else if (folderId === 'smart:attachments') {
     rows = db.prepare(`
-      SELECT * FROM notes WHERE deleted_at IS NULL AND body LIKE '%fileAttachment%'
+      SELECT ${NOTE_SUMMARY_COLUMNS} FROM notes WHERE deleted_at IS NULL AND body LIKE '%fileAttachment%'
       ORDER BY sort_order ASC, updated_at DESC
-    `).all()
+    `).all(EMPTY_DOC_BODY)
   } else if (folderId === 'smart:checklists') {
     rows = db.prepare(`
-      SELECT * FROM notes WHERE deleted_at IS NULL AND body LIKE '%taskList%'
+      SELECT ${NOTE_SUMMARY_COLUMNS} FROM notes WHERE deleted_at IS NULL AND body LIKE '%taskList%'
       ORDER BY sort_order ASC, updated_at DESC
-    `).all()
+    `).all(EMPTY_DOC_BODY)
   } else if (folderId === 'smart:locked') {
     rows = db.prepare(`
-      SELECT * FROM notes WHERE deleted_at IS NULL AND is_locked = 1
+      SELECT ${NOTE_SUMMARY_COLUMNS} FROM notes WHERE deleted_at IS NULL AND is_locked = 1
       ORDER BY sort_order ASC, updated_at DESC
-    `).all()
+    `).all(EMPTY_DOC_BODY)
   } else if (typeof folderId === 'string' && folderId.startsWith('tag:')) {
     const tag = folderId.slice(4).toLowerCase()
     rows = db.prepare(`
-      SELECT * FROM notes WHERE deleted_at IS NULL AND tags LIKE ?
+      SELECT ${NOTE_SUMMARY_COLUMNS} FROM notes WHERE deleted_at IS NULL AND tags LIKE ?
       ORDER BY sort_order ASC, updated_at DESC
-    `).all(`%"${tag}"%`)
+    `).all(EMPTY_DOC_BODY, `%"${tag}"%`)
   } else if (folderId === undefined) {
     rows = db.prepare(`
-      SELECT * FROM notes WHERE deleted_at IS NULL
+      SELECT ${NOTE_SUMMARY_COLUMNS} FROM notes WHERE deleted_at IS NULL
       ORDER BY is_pinned DESC, sort_order ASC, updated_at DESC
-    `).all()
+    `).all(EMPTY_DOC_BODY)
   } else {
     rows = db.prepare(`
-      SELECT * FROM notes WHERE folder_id = ? AND deleted_at IS NULL
+      SELECT ${NOTE_SUMMARY_COLUMNS} FROM notes WHERE folder_id = ? AND deleted_at IS NULL
       ORDER BY is_pinned DESC, sort_order ASC, updated_at DESC
-    `).all(folderId)
+    `).all(EMPTY_DOC_BODY, folderId)
   }
   return (rows as Record<string, unknown>[]).map(row2note)
 }
@@ -408,7 +428,7 @@ export function permanentDeleteNote(id: string): void {
 export function getTrash(): Note[] {
   const db = getDb()
   const rows = db.prepare(`
-    SELECT * FROM notes
+    SELECT ${NOTE_SUMMARY_COLUMNS} FROM notes
     WHERE deleted_at IS NOT NULL
       AND NOT EXISTS (
         SELECT 1 FROM folders
@@ -416,7 +436,7 @@ export function getTrash(): Note[] {
           AND folders.deleted_at IS NOT NULL
       )
     ORDER BY deleted_at DESC
-  `).all() as Record<string, unknown>[]
+  `).all(EMPTY_DOC_BODY) as Record<string, unknown>[]
   return rows.map(row2note)
 }
 
@@ -433,11 +453,11 @@ export function emptyOldTrash(): void {
 export function searchNotes(query: string): Note[] {
   const db = getDb()
   const rows = db.prepare(`
-    SELECT notes.* FROM notes_fts
+    SELECT ${NOTE_SUMMARY_COLUMNS} FROM notes_fts
     JOIN notes ON notes.rowid = notes_fts.rowid
     WHERE notes_fts MATCH ? AND notes.deleted_at IS NULL
     ORDER BY rank
-  `).all(query + '*') as Record<string, unknown>[]
+  `).all(EMPTY_DOC_BODY, query + '*') as Record<string, unknown>[]
   return rows.map(row2note)
 }
 
@@ -450,7 +470,7 @@ export function searchNotesAdvanced(query: string, filters: {
 } = {}): Note[] {
   const db = getDb()
   const clauses = ['notes.deleted_at IS NULL']
-  const values: unknown[] = []
+  const values: unknown[] = [EMPTY_DOC_BODY]
 
   if (query.trim()) {
     clauses.unshift('notes_fts MATCH ?')
@@ -468,8 +488,8 @@ export function searchNotesAdvanced(query: string, filters: {
   if (filters.dateRange === 'month') clauses.push("notes.updated_at >= datetime('now', '-30 days')")
 
   const sql = query.trim()
-    ? `SELECT notes.* FROM notes_fts JOIN notes ON notes.rowid = notes_fts.rowid WHERE ${clauses.join(' AND ')} ORDER BY rank`
-    : `SELECT notes.* FROM notes WHERE ${clauses.join(' AND ')} ORDER BY notes.updated_at DESC`
+    ? `SELECT ${NOTE_SUMMARY_COLUMNS} FROM notes_fts JOIN notes ON notes.rowid = notes_fts.rowid WHERE ${clauses.join(' AND ')} ORDER BY rank`
+    : `SELECT ${NOTE_SUMMARY_COLUMNS} FROM notes WHERE ${clauses.join(' AND ')} ORDER BY notes.updated_at DESC`
 
   const rows = db.prepare(sql).all(...values) as Record<string, unknown>[]
   return rows.map(row2note)
