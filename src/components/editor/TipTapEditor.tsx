@@ -172,6 +172,13 @@ export function TipTapEditor({ note, searchQuery }: Props) {
           return true
         }
 
+        const plainText = event.clipboardData?.getData('text/plain')
+        if (plainText && looksLikeHtmlText(plainText)) {
+          event.preventDefault()
+          editor?.chain().focus().insertContent(cleanPastedHtml(plainText)).run()
+          return true
+        }
+
         return false
       }
     },
@@ -370,8 +377,15 @@ export function TipTapEditor({ note, searchQuery }: Props) {
   )
 }
 
-function cleanPastedHtml(html: string): string {
-  const doc = new DOMParser().parseFromString(html, 'text/html')
+function cleanPastedHtml(html: string, depth = 0): string {
+  const source = decodeHtmlEntities(html.trim())
+  const doc = new DOMParser().parseFromString(source, 'text/html')
+  const visibleText = doc.body.textContent?.trim() ?? ''
+
+  if (depth === 0 && visibleText !== source && looksLikeHtmlText(visibleText)) {
+    return cleanPastedHtml(visibleText, depth + 1)
+  }
+
   mergeConsecutiveTables(doc)
   doc.querySelectorAll('*').forEach(element => {
     element.removeAttribute('style')
@@ -383,6 +397,17 @@ function cleanPastedHtml(html: string): string {
   })
   doc.querySelectorAll('script,style,meta,link').forEach(element => element.remove())
   return doc.body.innerHTML
+}
+
+function looksLikeHtmlText(text: string): boolean {
+  return /<\/?(p|div|br|table|tbody|thead|tr|td|th|ul|ol|li|h[1-6]|strong|b|em|i|span|blockquote|pre|code)\b[^>]*>/i.test(text)
+}
+
+function decodeHtmlEntities(value: string): string {
+  if (!/&(?:lt|gt|amp|quot|#39);/i.test(value)) return value
+  const textarea = document.createElement('textarea')
+  textarea.innerHTML = value
+  return textarea.value
 }
 
 function mergeConsecutiveTables(doc: Document): void {
