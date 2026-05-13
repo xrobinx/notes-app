@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   NotebookText, Star, Trash2,
   Plus, ChevronDown, ChevronRight, Folder,
-  PanelLeftClose, PanelLeftOpen, Settings, Paperclip, CheckSquare, Lock
+  PanelLeftClose, PanelLeftOpen, Settings, Paperclip, CheckSquare
 } from 'lucide-react'
 import { useFoldersStore } from '../../store/foldersStore'
 import { useNotesStore } from '../../store/notesStore'
@@ -210,7 +210,6 @@ export function Sidebar({ collapsed, onToggle, onOpenSettings }: Props) {
           {[
             ['smart:attachments', 'Attachments', Paperclip],
             ['smart:checklists', 'Checklists', CheckSquare],
-            ['smart:locked', 'Locked', Lock],
           ].map(([id, label, Icon]) => (
             <div
               key={id as string}

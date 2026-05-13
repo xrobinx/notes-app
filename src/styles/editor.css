@@ -8,6 +8,7 @@
   line-height: 1.6;
   color: var(--text-primary);
   font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+  position: relative;
 }
 
 .tiptap::after {
@@ -205,6 +206,17 @@
   position: relative;
 }
 
+.resizable-image.free-placement {
+  position: absolute;
+  margin: 0;
+  z-index: 5;
+  cursor: move;
+}
+
+.resizable-image.free-placement.is-selected {
+  z-index: 8;
+}
+
 .resizable-image.align-left {
   margin-left: 0;
   margin-right: auto;
@@ -260,6 +272,11 @@
 
 .image-align-controls button:hover {
   background: var(--bg-card-hover);
+  color: var(--accent);
+}
+
+.image-align-controls button.active {
+  background: var(--accent-muted);
   color: var(--accent);
 }
 

@@ -11,7 +11,7 @@ import { HighlightPicker } from './HighlightPicker'
 import { TextColorPicker } from './TextColorPicker'
 import { useSettingsStore } from '../../store/settingsStore'
 import { comboMatchesEvent, getShortcut, shortcutTitle } from '../../utils/shortcuts'
-import { TRANSLATION_LANGUAGES } from '../../utils/languages'
+import { getTranslationLanguage, TRANSLATION_LANGUAGES } from '../../utils/languages'
 import './Toolbar.css'
 
 interface Props {
@@ -30,6 +30,7 @@ export function Toolbar({ editor, noteId, searchOpen, onToggleSearch }: Props) {
   const [textColor, setTextColor] = useState('#f5f5f7')
   const [highlightColor, setHighlightColor] = useState('#ffd60a')
   const [highlightOpacity, setHighlightOpacity] = useState(40)
+  const [languageExpanded, setLanguageExpanded] = useState(false)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const highlightClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -147,6 +148,7 @@ export function Toolbar({ editor, noteId, searchOpen, onToggleSearch }: Props) {
   }
 
   const isInsideTable = editor.isActive('table')
+  const activeLanguage = getTranslationLanguage(settings.translationLanguage)
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -240,17 +242,27 @@ export function Toolbar({ editor, noteId, searchOpen, onToggleSearch }: Props) {
             </>
           )}
         </div>
-        <div className="toolbar-language-picker" title="Translate right-click target language">
+        <div
+          className={`toolbar-language-picker ${languageExpanded ? 'expanded' : 'collapsed'}`}
+          title={`Translate target: ${activeLanguage.label}. Double-click to ${languageExpanded ? 'collapse' : 'choose language'}.`}
+          onDoubleClick={() => setLanguageExpanded(value => !value)}
+        >
           <Languages size={13} />
-          <select
-            value={settings.translationLanguage}
-            onChange={event => void setTranslationLanguage(event.target.value)}
-            aria-label="Translate language"
-          >
-            {TRANSLATION_LANGUAGES.map(language => (
-              <option key={language.code} value={language.code}>{language.label}</option>
-            ))}
-          </select>
+          {languageExpanded && (
+            <select
+              value={settings.translationLanguage}
+              onChange={event => void setTranslationLanguage(event.target.value)}
+              onDoubleClick={event => {
+                event.stopPropagation()
+                setLanguageExpanded(false)
+              }}
+              aria-label="Translate language"
+            >
+              {TRANSLATION_LANGUAGES.map(language => (
+                <option key={language.code} value={language.code}>{language.label}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Bell, CalendarClock, Check, CheckSquare, ListChecks, StickyNote, Trash2, X } from 'lucide-react'
+import { useSettingsStore } from '../../store/settingsStore'
+import { getTranslationLanguage } from '../../utils/languages'
 import './DesktopWidget.css'
 
 export type WidgetType = 'all' | 'note' | 'todo' | 'reminder'
@@ -36,6 +38,7 @@ const modeLabels: Record<Exclude<WidgetType, 'all'>, string> = {
 }
 
 export function DesktopWidget({ type }: Props) {
+  const settings = useSettingsStore()
   const storageKey = useMemo(() => `notes-widget-${type}`, [type])
   const [mode, setMode] = useState<Exclude<WidgetType, 'all'>>(type === 'all' ? 'note' : type)
   const [note, setNote] = useState('')
@@ -49,6 +52,11 @@ export function DesktopWidget({ type }: Props) {
   const [editingTodoId, setEditingTodoId] = useState<string | null>(null)
   const [editingReminderId, setEditingReminderId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
+  const language = getTranslationLanguage(settings.translationLanguage)
+
+  useEffect(() => {
+    if (!settings.loaded) void settings.load()
+  }, [settings])
 
   useEffect(() => {
     const saved = localStorage.getItem(storageKey)
@@ -152,6 +160,8 @@ export function DesktopWidget({ type }: Props) {
             <textarea
               className="widget-note-input"
               value={note}
+              spellCheck={settings.spellcheckEnabled}
+              lang={language.spellcheck}
               placeholder="Write anything..."
               onChange={event => setNote(event.target.value)}
             />
@@ -166,6 +176,8 @@ export function DesktopWidget({ type }: Props) {
               </button>
               <input
                 value={todoText}
+                spellCheck={settings.spellcheckEnabled}
+                lang={language.spellcheck}
                 placeholder="New checklist item"
                 onChange={event => setTodoText(event.target.value)}
                 onKeyDown={event => {
@@ -191,6 +203,8 @@ export function DesktopWidget({ type }: Props) {
                       className="widget-item-edit"
                       autoFocus
                       value={editText}
+                      spellCheck={settings.spellcheckEnabled}
+                      lang={language.spellcheck}
                       onChange={event => setEditText(event.target.value)}
                       onBlur={() => finishTodoEdit(item.id)}
                       onKeyDown={event => {
@@ -229,6 +243,8 @@ export function DesktopWidget({ type }: Props) {
               </button>
               <input
                 value={reminderText}
+                spellCheck={settings.spellcheckEnabled}
+                lang={language.spellcheck}
                 placeholder="New reminder"
                 onChange={event => setReminderText(event.target.value)}
                 onKeyDown={event => {
@@ -271,6 +287,8 @@ export function DesktopWidget({ type }: Props) {
                       className="widget-item-edit"
                       autoFocus
                       value={editText}
+                      spellCheck={settings.spellcheckEnabled}
+                      lang={language.spellcheck}
                       onChange={event => setEditText(event.target.value)}
                       onBlur={() => finishReminderEdit(item.id)}
                       onKeyDown={event => {
