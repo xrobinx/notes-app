@@ -17,6 +17,7 @@ import { createLowlight, common } from 'lowlight'
 import { ResizableImage } from './ResizableImage'
 import { FileAttachment } from './FileAttachment'
 import { SearchHighlight } from './SearchHighlight'
+import { FreeCanvasBlock } from './FreeCanvasBlock'
 
 const lowlight = createLowlight(common)
 
@@ -67,6 +68,7 @@ export const editorExtensions = [
   CodeBlockLowlight.configure({ lowlight }),
   ResizableImage.configure({ inline: false, allowBase64: true }),
   FileAttachment,
+  FreeCanvasBlock,
   Link.configure({
     openOnClick: false,
     autolink: true,

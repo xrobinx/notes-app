@@ -4,6 +4,7 @@ import { Sidebar } from '../sidebar/Sidebar'
 import { NoteList } from '../notes/NoteList'
 import { EditorPanel } from './EditorPanel'
 import { SettingsModal } from '../modals/SettingsModal'
+import { ReminderCenter } from '../modals/ReminderCenter'
 import { useNotesStore } from '../../store/notesStore'
 import { useFoldersStore } from '../../store/foldersStore'
 import { useSettingsStore } from '../../store/settingsStore'
@@ -14,6 +15,8 @@ export function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [noteListCollapsed, setNoteListCollapsed] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [remindersOpen, setRemindersOpen] = useState(false)
+  const [focusMode, setFocusMode] = useState(false)
   const [editorSearchQuery, setEditorSearchQuery] = useState('')
   const { createNote, selectNote, selectedNoteId, duplicateNote, clearUnlockedNotes, unlockedNoteIds } = useNotesStore()
   const { createFolder, selectedFolderId } = useFoldersStore()
@@ -77,21 +80,31 @@ export function AppLayout() {
   return (
     <div className="app-layout">
       <TitleBar />
-      <div className="app-body">
-        <Sidebar
-          collapsed={sidebarCollapsed}
-          onToggle={() => setSidebarCollapsed(v => !v)}
-          onOpenSettings={() => setSettingsOpen(true)}
+      <div className={`app-body ${focusMode ? 'focus-mode' : ''}`}>
+        {!focusMode && (
+          <>
+            <Sidebar
+              collapsed={sidebarCollapsed}
+              onToggle={() => setSidebarCollapsed(v => !v)}
+              onOpenSettings={() => setSettingsOpen(true)}
+              onOpenReminders={() => setRemindersOpen(true)}
+            />
+            <NoteList
+              collapsed={noteListCollapsed}
+              onToggle={() => setNoteListCollapsed(v => !v)}
+              onSearchCleared={() => setEditorSearchQuery('')}
+              onSearchResultOpen={setEditorSearchQuery}
+            />
+          </>
+        )}
+        <EditorPanel
+          searchQuery={editorSearchQuery}
+          focusMode={focusMode}
+          onToggleFocusMode={() => setFocusMode(value => !value)}
         />
-        <NoteList
-          collapsed={noteListCollapsed}
-          onToggle={() => setNoteListCollapsed(v => !v)}
-          onSearchCleared={() => setEditorSearchQuery('')}
-          onSearchResultOpen={setEditorSearchQuery}
-        />
-        <EditorPanel searchQuery={editorSearchQuery} />
       </div>
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+      {remindersOpen && <ReminderCenter onClose={() => setRemindersOpen(false)} />}
     </div>
   )
 }

@@ -10,7 +10,9 @@
 }
 
 .onboarding-card {
-  width: min(440px, 100%);
+  width: min(720px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  overflow-y: auto;
   padding: 28px;
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -112,4 +114,69 @@
   margin-top: 10px;
   color: var(--danger);
   font-size: 12px;
+}
+
+.onboarding-section-title {
+  margin: 16px 0 8px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.onboarding-use-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.onboarding-use-grid button,
+.onboarding-template-grid button {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.onboarding-use-grid button {
+  height: 38px;
+  font-weight: 700;
+}
+
+.onboarding-template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.onboarding-template-grid button {
+  min-height: 76px;
+  padding: 10px;
+  text-align: left;
+}
+
+.onboarding-template-grid strong,
+.onboarding-template-grid span {
+  display: block;
+}
+
+.onboarding-template-grid strong {
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.onboarding-template-grid span {
+  margin-top: 4px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.onboarding-use-grid button.active,
+.onboarding-template-grid button.active {
+  border-color: var(--accent);
+  background: var(--accent-muted);
+  color: var(--accent);
 }

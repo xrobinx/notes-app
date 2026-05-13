@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Bell, CalendarClock, Check, CheckSquare, ListChecks, StickyNote, Trash2, X } from 'lucide-react'
 import { useSettingsStore } from '../../store/settingsStore'
 import { getTranslationLanguage } from '../../utils/languages'
+import { readAllReminders, scheduleStoredReminder, writeAllReminders } from '../../utils/reminderStorage'
 import './DesktopWidget.css'
 
 export type WidgetType = 'all' | 'note' | 'todo' | 'reminder'
@@ -65,7 +66,7 @@ export function DesktopWidget({ type }: Props) {
       const data = JSON.parse(saved)
       setNote(data.note ?? '')
       setTodos(data.todos ?? [])
-      setReminders(data.reminders ?? [])
+      setReminders(type === 'reminder' || type === 'all' ? readAllReminders() : data.reminders ?? [])
     } catch {
       // Ignore older or broken widget data.
     }
@@ -73,11 +74,12 @@ export function DesktopWidget({ type }: Props) {
 
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify({ note, todos, reminders }))
+    if (type === 'reminder' || type === 'all') writeAllReminders(reminders)
   }, [storageKey, note, todos, reminders])
 
   useEffect(() => {
     reminders.forEach(item => {
-      if (!item.done && item.dueAt) void window.api.widgets.scheduleReminder({ id: item.id, text: item.text, dueAt: item.dueAt })
+      scheduleStoredReminder(item)
     })
   }, [reminders])
 

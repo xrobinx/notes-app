@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { useNotesStore } from '../../store/notesStore'
 import { TipTapEditor } from '../editor/TipTapEditor'
-import { Download, History, Lock, LockOpen, Pencil, RotateCcw } from 'lucide-react'
+import { Download, Focus, History, Lock, LockOpen, Maximize2, Pencil, RotateCcw } from 'lucide-react'
 import { generateHTML } from '@tiptap/html'
 import './EditorPanel.css'
 import { editorExtensions } from '../editor/extensions'
@@ -18,7 +18,7 @@ const EMOJI_POOL = [
   '🐶','🐱','🐻','🐼','🦉','🦅','🦜','🐬','🎭','🎬',
 ]
 
-export function EditorPanel({ searchQuery }: { searchQuery: string }) {
+export function EditorPanel({ searchQuery, focusMode = false, onToggleFocusMode }: { searchQuery: string; focusMode?: boolean; onToggleFocusMode?: () => void }) {
   const { selectedNoteId, notes, unlockedNoteIds, updateNote, lockNote, lockNoteGlobal, unlockNote, removeNoteLock, markNoteUnlocked, getNoteHistory, restoreNoteHistory } = useNotesStore()
   const settings = useSettingsStore()
   const note = notes.find(n => n.id === selectedNoteId) ?? null
@@ -252,6 +252,13 @@ export function EditorPanel({ searchQuery }: { searchQuery: string }) {
               title="Version history"
             >
               <History size={15} />
+            </button>
+            <button
+              className={`editor-header-action ${focusMode ? 'active' : ''}`}
+              onClick={onToggleFocusMode}
+              title={focusMode ? 'Exit focus mode' : 'Focus mode'}
+            >
+              {focusMode ? <Maximize2 size={15} /> : <Focus size={15} />}
             </button>
             <button
               className="editor-header-action"

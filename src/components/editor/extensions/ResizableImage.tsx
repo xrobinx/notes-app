@@ -3,7 +3,7 @@ import Image from '@tiptap/extension-image'
 import { mergeAttributes } from '@tiptap/core'
 import { NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
-import { AlignCenter, AlignLeft, AlignRight, Move } from 'lucide-react'
+import { AlignCenter, AlignLeft, AlignRight, Captions, Expand, Move, RotateCw, Scissors, Square } from 'lucide-react'
 
 function ResizableImageView({ node, selected, updateAttributes }: NodeViewProps) {
   const startX = useRef(0)
@@ -19,6 +19,10 @@ function ResizableImageView({ node, selected, updateAttributes }: NodeViewProps)
   const free = Boolean(node.attrs.free)
   const freeX = Number(node.attrs.x ?? 0)
   const freeY = Number(node.attrs.y ?? 0)
+  const rotate = Number(node.attrs.rotate ?? 0)
+  const radius = Number(node.attrs.radius ?? 6)
+  const crop = Boolean(node.attrs.crop)
+  const caption = node.attrs.caption || ''
 
   const beginResize = useCallback((event: React.PointerEvent<HTMLButtonElement>, handleSide: 'left' | 'right') => {
     event.preventDefault()
@@ -87,7 +91,17 @@ function ResizableImageView({ node, selected, updateAttributes }: NodeViewProps)
       onPointerMove={move}
       onPointerUp={endMove}
     >
-      <img src={node.attrs.src} alt={node.attrs.alt || ''} title={node.attrs.title || ''} draggable={false} loading="lazy" decoding="async" />
+      <img
+        src={node.attrs.src}
+        alt={node.attrs.alt || ''}
+        title={node.attrs.title || ''}
+        draggable={false}
+        loading="lazy"
+        decoding="async"
+        className={crop ? 'is-cropped' : ''}
+        style={{ transform: `rotate(${rotate}deg)`, borderRadius: radius }}
+      />
+      {caption && <figcaption>{caption}</figcaption>}
       {selected && (
         <div className="image-align-controls" contentEditable={false}>
           <button
@@ -100,6 +114,19 @@ function ResizableImageView({ node, selected, updateAttributes }: NodeViewProps)
           <button onClick={() => updateAttributes({ align: 'left' })} title="Align image left"><AlignLeft size={13} /></button>
           <button onClick={() => updateAttributes({ align: 'center' })} title="Align image center"><AlignCenter size={13} /></button>
           <button onClick={() => updateAttributes({ align: 'right' })} title="Align image right"><AlignRight size={13} /></button>
+          <button onClick={() => updateAttributes({ width: '100%', align: 'center' })} title="Make full width"><Expand size={13} /></button>
+          <button onClick={() => updateAttributes({ rotate: (rotate + 90) % 360 })} title="Rotate image"><RotateCw size={13} /></button>
+          <button onClick={() => updateAttributes({ crop: !crop })} className={crop ? 'active' : ''} title="Toggle crop fill"><Scissors size={13} /></button>
+          <button onClick={() => updateAttributes({ radius: radius >= 18 ? 0 : radius + 6 })} title="Border radius"><Square size={13} /></button>
+          <button
+            onClick={() => {
+              const next = window.prompt('Image caption', caption)
+              if (next !== null) updateAttributes({ caption: next.trim() })
+            }}
+            title="Caption"
+          >
+            <Captions size={13} />
+          </button>
         </div>
       )}
       <button
@@ -158,6 +185,26 @@ export const ResizableImage = Image.extend({
         default: 0,
         parseHTML: element => Number(element.getAttribute('data-y') || 0),
         renderHTML: attributes => attributes.free ? { 'data-y': String(attributes.y ?? 0) } : {},
+      },
+      rotate: {
+        default: 0,
+        parseHTML: element => Number(element.getAttribute('data-rotate') || 0),
+        renderHTML: attributes => attributes.rotate ? { 'data-rotate': String(attributes.rotate) } : {},
+      },
+      radius: {
+        default: 6,
+        parseHTML: element => Number(element.getAttribute('data-radius') || 6),
+        renderHTML: attributes => ({ 'data-radius': String(attributes.radius ?? 6) }),
+      },
+      crop: {
+        default: false,
+        parseHTML: element => element.getAttribute('data-crop') === 'true',
+        renderHTML: attributes => attributes.crop ? { 'data-crop': 'true' } : {},
+      },
+      caption: {
+        default: '',
+        parseHTML: element => element.getAttribute('data-caption') || '',
+        renderHTML: attributes => attributes.caption ? { 'data-caption': attributes.caption } : {},
       },
     }
   },

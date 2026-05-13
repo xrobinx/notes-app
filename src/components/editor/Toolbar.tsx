@@ -4,7 +4,7 @@ import {
   Bold, Italic, Underline, Strikethrough,
   List, ListOrdered, CheckSquare, Quote,
   Code, Minus, Link2, Image, Paperclip,
-  Highlighter, Palette, Table2, ChevronDown, Search, Languages
+  Highlighter, Palette, Table2, ChevronDown, Search, Languages, PenTool
 } from 'lucide-react'
 import { TableGrid } from './TableGrid'
 import { HighlightPicker } from './HighlightPicker'
@@ -422,6 +422,13 @@ export function Toolbar({ editor, noteId, searchOpen, onToggleSearch }: Props) {
           title="Search this note"
         >
           <Search size={14} />
+        </button>
+        <button
+          className="toolbar-btn"
+          onClick={() => editor.chain().focus().insertFreeCanvas().run()}
+          title="Insert canvas / sketch block"
+        >
+          <PenTool size={14} />
         </button>
         <button className="toolbar-btn" onClick={() => imageInputRef.current?.click()} title={shortcutTitle('Insert image', settings.shortcuts, 'insertImage')}>
           <Image size={14} />

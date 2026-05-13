@@ -237,6 +237,19 @@
   width: 100%;
   max-width: 100%;
   margin: 0;
+  transition: transform 0.12s ease;
+}
+
+.resizable-image img.is-cropped {
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.resizable-image figcaption {
+  margin-top: 6px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  text-align: center;
 }
 
 .resizable-image.is-selected img {
@@ -410,6 +423,111 @@
   background: var(--bg-input);
   color: var(--text-secondary);
   border: 1px solid var(--border);
+}
+
+.free-canvas-block {
+  margin: 14px 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #242426;
+  overflow: hidden;
+}
+
+.free-canvas-block.is-selected {
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.free-canvas-toolbar {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--border);
+  background: #2f2f31;
+}
+
+.free-canvas-toolbar span {
+  flex: 1;
+}
+
+.free-canvas-toolbar button {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.free-canvas-toolbar button:hover,
+.free-canvas-toolbar button.active {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+.free-canvas-surface {
+  position: relative;
+  min-height: 260px;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
+    #222224;
+  background-size: 32px 32px;
+}
+
+.free-canvas-surface.tool-pen,
+.free-canvas-surface.tool-highlight,
+.free-canvas-surface.tool-erase {
+  cursor: crosshair;
+}
+
+.free-canvas-drawing {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.canvas-item {
+  position: absolute;
+  z-index: 2;
+  cursor: move;
+  user-select: none;
+}
+
+.canvas-item textarea {
+  width: 180px;
+  min-height: 78px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 9px;
+  background: rgba(0,0,0,0.28);
+  color: var(--text-primary);
+  resize: both;
+  padding: 8px;
+  font: inherit;
+  outline: none;
+}
+
+.canvas-item-sticker span {
+  font-size: 38px;
+  line-height: 1;
+}
+
+.canvas-item-arrow svg {
+  color: var(--accent);
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.28));
+}
+
+.canvas-item-image img {
+  width: 100%;
+  display: block;
+  border-radius: 10px;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.28);
 }
 
 /* Placeholder */

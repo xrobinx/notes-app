@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   NotebookText, Star, Trash2,
   Plus, ChevronDown, ChevronRight, Folder,
-  PanelLeftClose, PanelLeftOpen, Settings, Paperclip, CheckSquare
+  PanelLeftClose, PanelLeftOpen, Settings, Paperclip, CheckSquare, Bell
 } from 'lucide-react'
 import { useFoldersStore } from '../../store/foldersStore'
 import { useNotesStore } from '../../store/notesStore'
@@ -14,9 +14,10 @@ interface Props {
   collapsed: boolean
   onToggle: () => void
   onOpenSettings: () => void
+  onOpenReminders: () => void
 }
 
-export function Sidebar({ collapsed, onToggle, onOpenSettings }: Props) {
+export function Sidebar({ collapsed, onToggle, onOpenSettings, onOpenReminders }: Props) {
   const { folders, selectedFolderId, load, createFolder, renameFolder, deleteFolder, selectFolder, moveFolder } = useFoldersStore()
   const { loadNotes, selectNote, moveNote } = useNotesStore()
   const { nickname } = useSettingsStore()
@@ -277,6 +278,14 @@ export function Sidebar({ collapsed, onToggle, onOpenSettings }: Props) {
         </div>
 
         <div className="sidebar-footer">
+          <button
+            className="sidebar-item sidebar-settings-btn"
+            onClick={onOpenReminders}
+            title="Reminder Center"
+          >
+            <Bell size={collapsed ? 18 : 16} className="sidebar-icon" />
+            {!collapsed && <span className="sidebar-label">Reminders</span>}
+          </button>
           <button
             className="sidebar-item sidebar-settings-btn"
             onClick={onOpenSettings}

@@ -221,6 +221,11 @@
   color: var(--accent);
 }
 
+.editor-header-action.active {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
 .editor-lock-toggle {
   color: var(--text-tertiary);
 }

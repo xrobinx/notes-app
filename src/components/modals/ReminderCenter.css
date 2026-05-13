@@ -1,0 +1,145 @@
+.reminder-center-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  background: rgba(0, 0, 0, 0.38);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+}
+
+.reminder-center {
+  width: min(760px, 100%);
+  max-height: min(680px, calc(100vh - 56px));
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-popover);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.reminder-center header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.reminder-center header > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reminder-center header svg {
+  color: var(--accent);
+}
+
+.reminder-center h2,
+.reminder-center p {
+  margin: 0;
+}
+
+.reminder-center h2 {
+  color: var(--text-primary);
+  font-size: 16px;
+}
+
+.reminder-center p {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.reminder-center header button,
+.reminder-center-item button,
+.reminder-center-item select {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font: inherit;
+}
+
+.reminder-center header button {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reminder-center-list {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.reminder-center-empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-tertiary);
+}
+
+.reminder-center-item {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto auto auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-input);
+}
+
+.reminder-center-item.done {
+  opacity: 0.58;
+}
+
+.reminder-complete {
+  width: 28px;
+  height: 28px;
+}
+
+.reminder-center-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.reminder-center-copy strong {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.reminder-center-copy span,
+.reminder-center-copy small {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.reminder-center-item button {
+  height: 28px;
+  padding: 0 9px;
+}
+
+.reminder-center-item select {
+  height: 28px;
+  color-scheme: dark;
+}
+
+.reminder-center-item .danger {
+  color: var(--danger);
+}
