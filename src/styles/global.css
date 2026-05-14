@@ -77,3 +77,10 @@ input, textarea { user-select: text; }
 .fade-in { animation: fadeIn 0.15s ease forwards; }
 .slide-in-left { animation: slideInLeft 0.15s ease forwards; }
 .scale-in { animation: scaleIn 0.12s ease forwards; }
+
+html[data-performance-mode] *,
+html[data-performance-mode] *::before,
+html[data-performance-mode] *::after {
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+}

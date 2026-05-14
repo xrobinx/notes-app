@@ -1,8 +1,10 @@
 import { BrowserWindow, ipcMain, shell, dialog } from 'electron'
 import { join } from 'path'
-import { readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'fs'
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'fs'
 import { app } from 'electron'
 import mammoth from 'mammoth'
+import AdmZip from 'adm-zip'
+import { closeDb, getDb } from '../database/db'
 
 function escapeHtml(value: string): string {
   return value
@@ -207,5 +209,64 @@ export function registerFilesIpc(): void {
       content: readFileSync(filePath, 'utf8'),
       format: extension === 'html' || extension === 'htm' ? 'html' : extension === 'md' || extension === 'markdown' ? 'markdown' : 'text'
     }
+  })
+
+  ipcMain.handle('files:export-local-backup', async () => {
+    const result = await dialog.showSaveDialog({
+      defaultPath: `Notes Backup ${new Date().toISOString().slice(0, 10)}.zip`,
+      filters: [{ name: 'Notes backup', extensions: ['zip'] }]
+    })
+    if (result.canceled || !result.filePath) return null
+
+    const userData = app.getPath('userData')
+    const tempDbPath = join(app.getPath('temp'), `notes-backup-${Date.now()}.db`)
+    const zip = new AdmZip()
+    await getDb().backup(tempDbPath)
+    zip.addLocalFile(tempDbPath, '', 'notes.db')
+    if (existsSync(join(userData, 'attachments'))) {
+      zip.addLocalFolder(join(userData, 'attachments'), 'attachments')
+    }
+    zip.addFile('backup-info.json', Buffer.from(JSON.stringify({
+      app: 'Notes',
+      version: app.getVersion(),
+      createdAt: new Date().toISOString()
+    }, null, 2), 'utf8'))
+    zip.writeZip(result.filePath)
+    try { unlinkSync(tempDbPath) } catch { /* ignore temp cleanup */ }
+    return result.filePath
+  })
+
+  ipcMain.handle('files:import-local-backup', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [{ name: 'Notes backup', extensions: ['zip'] }]
+    })
+    if (result.canceled || result.filePaths.length === 0) return { ok: false, cancelled: true }
+
+    const zip = new AdmZip(result.filePaths[0])
+    if (!zip.getEntry('notes.db')) return { ok: false, error: 'This zip does not contain a Notes backup database.' }
+    const userData = app.getPath('userData')
+    const tempRestore = join(app.getPath('temp'), `notes-restore-${Date.now()}`)
+    mkdirSync(tempRestore, { recursive: true })
+    zip.extractAllTo(tempRestore, true)
+
+    try {
+      closeDb()
+      const dbPath = join(userData, 'notes.db')
+      const attachmentsPath = join(userData, 'attachments')
+      rmSync(dbPath, { force: true })
+      rmSync(attachmentsPath, { recursive: true, force: true })
+      mkdirSync(userData, { recursive: true })
+      writeFileSync(dbPath, readFileSync(join(tempRestore, 'notes.db')))
+      if (existsSync(join(tempRestore, 'attachments'))) {
+        cpSync(join(tempRestore, 'attachments'), attachmentsPath, { recursive: true })
+      }
+    } finally {
+      rmSync(tempRestore, { recursive: true, force: true })
+    }
+
+    app.relaunch()
+    app.exit(0)
+    return { ok: true, restartRequired: true }
   })
 }

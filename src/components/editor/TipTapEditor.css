@@ -79,6 +79,27 @@
   flex: 1;
 }
 
+.tiptap-wrapper.reading-mode .tiptap-content {
+  background: color-mix(in srgb, var(--bg-editor), #ffffff 2%);
+}
+
+.tiptap-wrapper.reading-mode .tiptap {
+  max-width: 820px;
+  width: 100%;
+  margin: 0 auto;
+  padding-top: 26px;
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+.tiptap-wrapper.reading-mode .tiptap h1 {
+  font-size: 34px;
+}
+
+.tiptap-wrapper.reading-mode .tiptap h2 {
+  font-size: 26px;
+}
+
 .editor-stats-footer {
   min-height: 28px;
   display: flex;

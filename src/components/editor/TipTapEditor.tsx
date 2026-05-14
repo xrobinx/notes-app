@@ -29,11 +29,12 @@ function extractPlainText(json: object): string {
 interface Props {
   note: Note
   searchQuery: string
+  readingMode?: boolean
 }
 
 type SaveStatus = 'saved' | 'saving' | 'error'
 
-export function TipTapEditor({ note, searchQuery }: Props) {
+export function TipTapEditor({ note, searchQuery, readingMode = false }: Props) {
   const { updateNote } = useNotesStore()
   const settings = useSettingsStore()
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -221,6 +222,11 @@ export function TipTapEditor({ note, searchQuery }: Props) {
 
   useEffect(() => {
     if (!editor) return
+    editor.setEditable(!readingMode)
+  }, [editor, readingMode])
+
+  useEffect(() => {
+    if (!editor) return
     const language = getTranslationLanguage(settings.translationLanguage)
     editor.setOptions({
       editorProps: {
@@ -282,19 +288,21 @@ export function TipTapEditor({ note, searchQuery }: Props) {
 
   const stats = getStats(editor.getText(), note)
   const matchCount = effectiveSearchQuery.trim() ? findSearchMatches(editor.state.doc, effectiveSearchQuery).length : 0
-  const grammarHints = settings.grammarHintsEnabled ? getGrammarHints(editor.getText()) : []
+  const grammarHints = settings.grammarHintsEnabled && !settings.performanceMode ? getGrammarHints(editor.getText()) : []
   const syncStatus = settings.syncStatus === 'syncing' ? 'Syncing...' : settings.syncStatus === 'synced' ? 'Synced' : settings.syncStatus === 'error' ? 'Sync error' : settings.syncStatus === 'offline' ? 'Offline' : null
   const localStatus = saveStatus === 'saving' ? 'Saving...' : saveStatus === 'error' ? 'Save error' : 'Saved'
 
   return (
-    <div className="tiptap-wrapper">
-      <Toolbar
-        editor={editor}
-        noteId={note.id}
-        searchOpen={searchOpen}
-        onToggleSearch={() => setSearchOpen(value => !value)}
-      />
-      {searchOpen && (
+    <div className={`tiptap-wrapper ${readingMode ? 'reading-mode' : ''}`}>
+      {!readingMode && (
+        <Toolbar
+          editor={editor}
+          noteId={note.id}
+          searchOpen={searchOpen}
+          onToggleSearch={() => setSearchOpen(value => !value)}
+        />
+      )}
+      {!readingMode && searchOpen && (
       <div className="editor-inline-search">
         <Search size={13} />
         <input
@@ -357,7 +365,7 @@ export function TipTapEditor({ note, searchQuery }: Props) {
       )}
       <div className="tiptap-content" ref={setContentEl}>
         <EditorContent editor={editor} />
-        <TableGrowControls editor={editor} container={contentEl} />
+        {!readingMode && <TableGrowControls editor={editor} container={contentEl} />}
       </div>
       <footer
         className={`editor-stats-footer ${statsVisible ? 'is-visible' : ''}`}

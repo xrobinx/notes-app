@@ -71,6 +71,8 @@ export interface ElectronAPI {
     exportNotePdf: (title: string, emoji: string, html: string) => Promise<string | null>
     exportTextFile: (defaultName: string, content: string, extension: string, typeName: string) => Promise<string | null>
     importTextFile: () => Promise<{ name: string; content: string; format?: 'text' | 'markdown' | 'html'; warnings?: string[] } | null>
+    exportLocalBackup: () => Promise<string | null>
+    importLocalBackup: () => Promise<{ ok: boolean; cancelled?: boolean; error?: string; restartRequired?: boolean }>
   }
   sync: {
     saveConfig: (clientId: string, clientSecret: string) => Promise<{ ok: boolean; error?: string }>

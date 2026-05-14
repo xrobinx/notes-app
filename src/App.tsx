@@ -20,7 +20,7 @@ export function App() {
 }
 
 function MainApp() {
-  const { load: loadSettings, hasCompletedOnboarding, loaded, refreshSyncStatus } = useSettingsStore()
+  const { load: loadSettings, hasCompletedOnboarding, loaded, performanceMode, refreshSyncStatus } = useSettingsStore()
   const { loadNotes, selectNote, notes } = useNotesStore()
   const { load: loadFolders } = useFoldersStore()
 
@@ -39,12 +39,12 @@ function MainApp() {
   }, [])
 
   useEffect(() => {
-    if (!loaded) return
+    if (!loaded || performanceMode) return
     const interval = window.setInterval(() => {
       void refreshSyncStatus()
     }, 5000)
     return () => window.clearInterval(interval)
-  }, [loaded, refreshSyncStatus])
+  }, [loaded, performanceMode, refreshSyncStatus])
 
   // Auto-open last note or first note once notes are loaded
   useEffect(() => {

@@ -43,6 +43,8 @@
     "@tiptap/pm": "^2.11.7",
     "@tiptap/react": "^2.11.7",
     "@tiptap/starter-kit": "^2.11.7",
+    "@types/adm-zip": "^0.5.8",
+    "adm-zip": "^0.5.17",
     "better-sqlite3": "^11.9.1",
     "date-fns": "^4.1.0",
     "electron-updater": "^6.8.3",

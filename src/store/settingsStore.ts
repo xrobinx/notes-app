@@ -37,6 +37,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   showEditorStats: false,
   spellcheckEnabled: true,
   grammarHintsEnabled: true,
+  performanceMode: false,
   translationLanguage: 'ms',
   shortcuts: DEFAULT_SHORTCUTS,
   openWidgets: [],
@@ -57,6 +58,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     })
     // Apply theme
     applyTheme(settings.theme)
+    applyPerformanceMode(settings.performanceMode)
     window.api.on.themeChange((isDark) => {
       const st = useSettingsStore.getState()
       if (st.theme === 'auto') {
@@ -69,6 +71,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     await window.api.settings.set(key, value)
     set({ [key]: value } as Partial<SettingsState>)
     if (key === 'theme') applyTheme(value as Settings['theme'])
+    if (key === 'performanceMode') applyPerformanceMode(Boolean(value))
   },
 
   refreshGlobalPasscode: async () => {
@@ -101,4 +104,8 @@ function applyTheme(theme: Settings['theme']) {
   } else {
     document.documentElement.setAttribute('data-theme', theme)
   }
+}
+
+function applyPerformanceMode(enabled: boolean) {
+  document.documentElement.toggleAttribute('data-performance-mode', enabled)
 }

@@ -111,6 +111,27 @@ export function SettingsModal({ onClose }: Props) {
     setMessage(`Imported ${imported.name}${imported.warnings?.length ? ` with ${imported.warnings.length} warning(s)` : ''}`)
   }
 
+  const exportLocalBackup = async () => {
+    setMessage('')
+    const path = await window.api.files.exportLocalBackup()
+    setMessage(path ? `Full local backup saved to ${path}` : 'Backup export cancelled.')
+  }
+
+  const importLocalBackup = async () => {
+    setMessage('')
+    if (!confirm('Importing a backup replaces local notes and attachments on this computer. Continue?')) return
+    const result = await window.api.files.importLocalBackup()
+    if (result.cancelled) {
+      setMessage('Backup import cancelled.')
+      return
+    }
+    if (!result.ok) {
+      setMessage(result.error ?? 'Could not import this backup.')
+      return
+    }
+    setMessage('Backup imported. Notes is restarting.')
+  }
+
   const connectGoogle = async () => {
     setMessage('')
     const hasTypedCredentials = Boolean(googleClientId.trim() || googleClientSecret.trim())
@@ -316,7 +337,13 @@ export function SettingsModal({ onClose }: Props) {
             <label><input type="checkbox" checked={settings.showEditorStats} onChange={event => settings.setSetting('showEditorStats', event.target.checked)} /> Show note stats</label>
             <label><input type="checkbox" checked={settings.spellcheckEnabled} onChange={event => settings.setSetting('spellcheckEnabled', event.target.checked)} /> Spellcheck</label>
             <label><input type="checkbox" checked={settings.grammarHintsEnabled} onChange={event => settings.setSetting('grammarHintsEnabled', event.target.checked)} /> Grammar hints</label>
+            <label><input type="checkbox" checked={settings.performanceMode} onChange={event => settings.setSetting('performanceMode', event.target.checked)} /> Performance mode</label>
           </div>
+          {settings.performanceMode && (
+            <div className="settings-sync-note">
+              Performance mode reduces memory use by disabling widget opening/restoring, grammar hints, animations, auto-sync polling, and sync status polling.
+            </div>
+          )}
         </section>
 
         <section className="settings-section">
@@ -483,6 +510,23 @@ export function SettingsModal({ onClose }: Props) {
         </section>
 
         <section className="settings-section">
+          <div className="settings-section-title">Backup / Restore</div>
+          <div className="settings-card-row">
+            <div className="settings-card-icon"><HardDrive size={18} /></div>
+            <div className="settings-card-copy">
+              <strong>Full local backup</strong>
+              <span>Export or restore all local notes, settings, and attachments as one .zip file.</span>
+            </div>
+            <button className="settings-action-btn" onClick={exportLocalBackup}>
+              Export .zip
+            </button>
+            <button className="settings-secondary-btn" onClick={importLocalBackup}>
+              Import .zip
+            </button>
+          </div>
+        </section>
+
+        <section className="settings-section">
           <div className="settings-section-title">Import</div>
           <div className="settings-card-row">
             <div className="settings-card-icon"><FileInput size={18} /></div>
@@ -506,11 +550,12 @@ export function SettingsModal({ onClose }: Props) {
             </div>
           </div>
           <div className="settings-format-row">
-            <button onClick={() => window.api.widgets.open('all')}>Combined</button>
-            <button onClick={() => window.api.widgets.open('note')}>Typed Note</button>
-            <button onClick={() => window.api.widgets.open('todo')}>Todo</button>
-            <button onClick={() => window.api.widgets.open('reminder')}>Reminders</button>
+            <button disabled={settings.performanceMode} onClick={() => window.api.widgets.open('all')}>Combined</button>
+            <button disabled={settings.performanceMode} onClick={() => window.api.widgets.open('note')}>Typed Note</button>
+            <button disabled={settings.performanceMode} onClick={() => window.api.widgets.open('todo')}>Todo</button>
+            <button disabled={settings.performanceMode} onClick={() => window.api.widgets.open('reminder')}>Reminders</button>
           </div>
+          {settings.performanceMode && <div className="settings-sync-note">Widgets are off while Performance mode is enabled.</div>}
         </section>
 
         <section className="settings-section">

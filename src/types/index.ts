@@ -68,6 +68,7 @@ export interface Settings {
   showEditorStats: boolean
   spellcheckEnabled: boolean
   grammarHintsEnabled: boolean
+  performanceMode: boolean
   translationLanguage: string
   shortcuts: Record<string, string>
   openWidgets: ('all' | 'note' | 'todo' | 'reminder')[]

@@ -105,60 +105,6 @@
   gap: 2px;
 }
 
-.new-note-menu-wrap {
-  position: relative;
-}
-
-.new-note-template-menu {
-  position: absolute;
-  top: 31px;
-  left: 0;
-  z-index: 50;
-  width: 236px;
-  display: grid;
-  gap: 4px;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-popover);
-  box-shadow: var(--shadow-lg);
-}
-
-.new-note-template-menu button {
-  min-width: 0;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-secondary);
-  padding: 8px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.new-note-template-menu button:hover {
-  background: var(--bg-card-hover);
-  color: var(--text-primary);
-}
-
-.new-note-template-menu strong,
-.new-note-template-menu span {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.new-note-template-menu strong {
-  color: var(--text-primary);
-  font-size: 12px;
-}
-
-.new-note-template-menu span {
-  margin-top: 2px;
-  font-size: 11px;
-  color: var(--text-tertiary);
-}
-
 .note-list-btn {
   background: none;
   border: none;

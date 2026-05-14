@@ -71,7 +71,9 @@ contextBridge.exposeInMainWorld('api', {
       ipcRenderer.invoke('files:export-note-pdf', title, emoji, html),
     exportTextFile: (defaultName: string, content: string, extension: string, typeName: string) =>
       ipcRenderer.invoke('files:export-text-file', defaultName, content, extension, typeName),
-    importTextFile: () => ipcRenderer.invoke('files:import-text-file')
+    importTextFile: () => ipcRenderer.invoke('files:import-text-file'),
+    exportLocalBackup: () => ipcRenderer.invoke('files:export-local-backup'),
+    importLocalBackup: () => ipcRenderer.invoke('files:import-local-backup')
   },
   sync: {
     saveConfig: (clientId: string, clientSecret: string) =>

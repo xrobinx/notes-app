@@ -165,6 +165,7 @@ function createWindow(): void {
 
 function openWidget(type: WidgetType): void {
   if (!widgetTypes.includes(type)) return
+  if (getSettings().performanceMode) return
 
   const existing = widgetWindows.get(type)
   if (existing && !existing.isDestroyed()) {
@@ -235,6 +236,7 @@ function persistOpenWidgets(): void {
 
 function restoreWidgets(): void {
   const settings = getSettings()
+  if (settings.performanceMode) return
   for (const type of settings.openWidgets) {
     openWidget(type)
   }
@@ -359,7 +361,7 @@ app.whenReady().then(() => {
 
   // Clean up old trash on launch
   try { emptyOldTrash() } catch { /* ignore */ }
-  scheduleAutoSync(5000)
+  if (!getSettings().performanceMode) scheduleAutoSync(5000)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

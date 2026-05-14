@@ -554,6 +554,7 @@ export async function restoreBackup(fileId: string): Promise<{ ok: boolean; mess
 
 export function scheduleAutoSync(delayMs = 2500): void {
   const settings = settingsRepo.getSettings()
+  if (settings.performanceMode) return
   if (settings.syncMode !== 'googleDrive' || !getTokens() || !hasStoredPassphrase()) return
   if (autoSyncTimer) clearTimeout(autoSyncTimer)
   autoSyncTimer = setTimeout(async () => {

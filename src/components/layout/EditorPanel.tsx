@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { useNotesStore } from '../../store/notesStore'
 import { TipTapEditor } from '../editor/TipTapEditor'
-import { Download, Focus, History, Lock, LockOpen, Maximize2, Pencil, RotateCcw } from 'lucide-react'
+import { BookOpen, Download, Focus, History, Lock, LockOpen, Maximize2, Pencil, RotateCcw } from 'lucide-react'
 import { generateHTML } from '@tiptap/html'
 import './EditorPanel.css'
 import { editorExtensions } from '../editor/extensions'
@@ -31,6 +31,7 @@ export function EditorPanel({ searchQuery, focusMode = false, onToggleFocusMode 
   const [unlockRemoveError, setUnlockRemoveError] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
   const [historyEntries, setHistoryEntries] = useState<NoteHistoryEntry[]>([])
+  const [readingMode, setReadingMode] = useState(false)
   const titleSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -261,6 +262,13 @@ export function EditorPanel({ searchQuery, focusMode = false, onToggleFocusMode 
               {focusMode ? <Maximize2 size={15} /> : <Focus size={15} />}
             </button>
             <button
+              className={`editor-header-action ${readingMode ? 'active' : ''}`}
+              onClick={() => setReadingMode(value => !value)}
+              title={readingMode ? 'Edit note' : 'Reading mode'}
+            >
+              {readingMode ? <Pencil size={15} /> : <BookOpen size={15} />}
+            </button>
+            <button
               className="editor-header-action"
               onClick={exportCurrentNotePdf}
               title={shortcutTitle('Export this note as PDF', settings.shortcuts, 'exportPdf')}
@@ -270,7 +278,7 @@ export function EditorPanel({ searchQuery, focusMode = false, onToggleFocusMode 
           </div>
 
           {/* Editor */}
-          <TipTapEditor note={note} searchQuery={searchQuery} key={note.id} />
+          <TipTapEditor note={note} searchQuery={searchQuery} readingMode={readingMode} key={note.id} />
         </div>
       </div>
       {lockDialogOpen && note.isLocked !== 1 && (
