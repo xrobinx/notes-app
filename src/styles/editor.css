@@ -431,10 +431,16 @@
   border-radius: 12px;
   background: #242426;
   overflow: hidden;
+  position: relative;
+  max-width: 100%;
 }
 
 .free-canvas-block.is-selected {
   box-shadow: 0 0 0 1px var(--accent);
+}
+
+.free-canvas-block:focus {
+  outline: none;
 }
 
 .free-canvas-toolbar {
@@ -447,7 +453,7 @@
   background: #2f2f31;
 }
 
-.free-canvas-toolbar span {
+.free-canvas-toolbar > span {
   flex: 1;
 }
 
@@ -470,6 +476,39 @@
   color: var(--accent);
 }
 
+.canvas-picker-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.canvas-picker-popover {
+  position: absolute;
+  top: 31px;
+  right: 0;
+  z-index: 20;
+  width: 178px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #333335;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.32);
+}
+
+.canvas-picker-popover.arrow-picker {
+  width: 132px;
+}
+
+.canvas-picker-popover button {
+  width: 34px;
+  height: 30px;
+  border-radius: 8px;
+  font-size: 17px;
+  line-height: 1;
+}
+
 .free-canvas-surface {
   position: relative;
   min-height: 260px;
@@ -487,6 +526,11 @@
   cursor: crosshair;
 }
 
+.free-canvas-surface.tool-placeArrow,
+.free-canvas-surface.tool-placeSticker {
+  cursor: copy;
+}
+
 .free-canvas-drawing {
   position: absolute;
   inset: 0;
@@ -498,6 +542,12 @@
   z-index: 2;
   cursor: move;
   user-select: none;
+}
+
+.canvas-item.selected {
+  outline: 1px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 8px;
 }
 
 .canvas-item textarea {
@@ -518,8 +568,13 @@
   line-height: 1;
 }
 
-.canvas-item-arrow svg {
+.canvas-item-arrow span {
+  display: inline-block;
+  min-width: 64px;
+  font-size: 64px;
+  line-height: 0.86;
   color: var(--accent);
+  font-family: "Segoe UI Symbol", "Segoe UI", sans-serif;
   filter: drop-shadow(0 2px 5px rgba(0,0,0,0.28));
 }
 
@@ -528,6 +583,70 @@
   display: block;
   border-radius: 10px;
   box-shadow: 0 10px 26px rgba(0,0,0,0.28);
+}
+
+.canvas-resize-handle {
+  position: absolute;
+  z-index: 12;
+  border: none;
+  padding: 0;
+  background: transparent;
+  opacity: 0;
+}
+
+.free-canvas-block:hover .canvas-resize-handle,
+.free-canvas-block.is-selected .canvas-resize-handle {
+  opacity: 1;
+}
+
+.canvas-resize-bottom {
+  left: 10px;
+  right: 18px;
+  bottom: 0;
+  height: 9px;
+  cursor: ns-resize;
+}
+
+.canvas-resize-right {
+  top: 45px;
+  right: 0;
+  bottom: 18px;
+  width: 9px;
+  cursor: ew-resize;
+}
+
+.canvas-resize-corner {
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+}
+
+.canvas-resize-bottom::after,
+.canvas-resize-right::after,
+.canvas-resize-corner::after {
+  content: "";
+  display: block;
+  border-radius: 999px;
+  background: rgba(255, 214, 10, 0.45);
+}
+
+.canvas-resize-bottom::after {
+  height: 3px;
+  margin: 3px 0;
+}
+
+.canvas-resize-right::after {
+  width: 3px;
+  height: 100%;
+  margin-left: 3px;
+}
+
+.canvas-resize-corner::after {
+  width: 8px;
+  height: 8px;
+  margin: 6px 0 0 6px;
 }
 
 /* Placeholder */
