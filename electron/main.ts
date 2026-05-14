@@ -303,22 +303,39 @@ ipcMain.on('window:close-current', event => {
 ipcMain.handle('window:is-maximized', () => mainWindow?.isMaximized() ?? false)
 ipcMain.handle('widgets:open', (_event, type: WidgetType) => openWidget(type))
 ipcMain.handle('language:refresh-spellchecker', () => configureSpellchecker())
+function showReminderNotification(reminder: { id: string; text: string }): void {
+  new Notification({
+    title: 'Notes reminder',
+    body: reminder.text,
+    icon: join(__dirname, '../../resources/icon.ico'),
+  }).show()
+  for (const window of BrowserWindow.getAllWindows()) {
+    window.webContents.send('widgets:reminder-fired', reminder.id)
+  }
+}
+
 ipcMain.handle('widgets:schedule-reminder', (_event, reminder: { id: string; text: string; dueAt: string }) => {
   const dueTime = new Date(reminder.dueAt).getTime()
   const delay = dueTime - Date.now()
-  if (!reminder.text.trim() || Number.isNaN(dueTime) || delay < 0) {
+  if (!reminder.text.trim() || Number.isNaN(dueTime)) {
     return { ok: false, error: 'Choose a future date and time.' }
   }
   if (reminderTimers.has(reminder.id)) clearTimeout(reminderTimers.get(reminder.id)!)
+  if (delay <= 0) {
+    showReminderNotification(reminder)
+    return { ok: true }
+  }
   const timer = setTimeout(() => {
-    new Notification({
-      title: 'Notes reminder',
-      body: reminder.text,
-      icon: join(__dirname, '../../resources/icon.ico'),
-    }).show()
+    showReminderNotification(reminder)
     reminderTimers.delete(reminder.id)
   }, Math.min(delay, 2147483647))
   reminderTimers.set(reminder.id, timer)
+  return { ok: true }
+})
+ipcMain.handle('widgets:cancel-reminder', (_event, id: string) => {
+  const timer = reminderTimers.get(id)
+  if (timer) clearTimeout(timer)
+  reminderTimers.delete(id)
   return { ok: true }
 })
 

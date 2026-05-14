@@ -5,6 +5,7 @@ import { useNotesStore } from './store/notesStore'
 import { useFoldersStore } from './store/foldersStore'
 import { DesktopWidget, type WidgetType } from './components/widgets/DesktopWidget'
 import { OnboardingModal } from './components/modals/OnboardingModal'
+import { markReminderNotified, scheduleAllReminders } from './utils/reminderStorage'
 import './styles/global.css'
 import './styles/titlebar.css'
 
@@ -28,8 +29,13 @@ function MainApp() {
       await loadSettings()
       await loadFolders()
       await loadNotes(null)
+      scheduleAllReminders()
     }
     init()
+  }, [])
+
+  useEffect(() => {
+    return window.api.on.reminderFired(markReminderNotified)
   }, [])
 
   useEffect(() => {

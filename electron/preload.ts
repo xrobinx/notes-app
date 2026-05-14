@@ -55,7 +55,8 @@ contextBridge.exposeInMainWorld('api', {
   widgets: {
     open: (type: 'all' | 'note' | 'todo' | 'reminder') => ipcRenderer.invoke('widgets:open', type),
     scheduleReminder: (reminder: { id: string; text: string; dueAt: string }) =>
-      ipcRenderer.invoke('widgets:schedule-reminder', reminder)
+      ipcRenderer.invoke('widgets:schedule-reminder', reminder),
+    cancelReminder: (id: string) => ipcRenderer.invoke('widgets:cancel-reminder', id)
   },
   language: {
     refreshSpellchecker: () => ipcRenderer.invoke('language:refresh-spellchecker')
@@ -93,6 +94,11 @@ contextBridge.exposeInMainWorld('api', {
       const handler = (_e: Electron.IpcRendererEvent, isDark: boolean) => cb(isDark)
       ipcRenderer.on('theme:changed', handler)
       return () => ipcRenderer.removeListener('theme:changed', handler)
+    },
+    reminderFired: (cb: (id: string) => void) => {
+      const handler = (_e: Electron.IpcRendererEvent, id: string) => cb(id)
+      ipcRenderer.on('widgets:reminder-fired', handler)
+      return () => ipcRenderer.removeListener('widgets:reminder-fired', handler)
     }
   }
 })

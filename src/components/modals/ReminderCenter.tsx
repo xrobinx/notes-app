@@ -1,17 +1,40 @@
 import { useEffect, useState } from 'react'
 import { Bell, Check, Clock3, RotateCcw, Trash2, X } from 'lucide-react'
-import { readAllReminders, scheduleStoredReminder, writeAllReminders, type StoredReminder } from '../../utils/reminderStorage'
+import { readAllReminders, removeReminder, scheduleStoredReminder, subscribeToReminderChanges, writeAllReminders, type StoredReminder } from '../../utils/reminderStorage'
 import './ReminderCenter.css'
+
+function formatTimeLeft(dueAt?: string, done?: boolean): string {
+  if (done) return 'Completed'
+  if (!dueAt) return 'No time'
+  const due = new Date(dueAt).getTime()
+  if (Number.isNaN(due)) return 'No time'
+  const diff = due - Date.now()
+  if (diff <= -60000) return 'Overdue'
+  if (diff <= 0) return 'Due now'
+  const minutes = Math.ceil(diff / 60000)
+  if (minutes < 60) return `${minutes}m left`
+  const hours = Math.floor(minutes / 60)
+  const rest = minutes % 60
+  if (hours < 24) return rest ? `${hours}h ${rest}m left` : `${hours}h left`
+  const days = Math.floor(hours / 24)
+  const dayHours = hours % 24
+  return dayHours ? `${days}d ${dayHours}h left` : `${days}d left`
+}
 
 export function ReminderCenter({ onClose }: { onClose: () => void }) {
   const [reminders, setReminders] = useState<StoredReminder[]>([])
+  const [, setClockTick] = useState(0)
 
   const refresh = () => setReminders(readAllReminders())
 
   useEffect(() => {
     refresh()
-    window.addEventListener('notes-reminders-changed', refresh)
-    return () => window.removeEventListener('notes-reminders-changed', refresh)
+    const unsubscribe = subscribeToReminderChanges(refresh)
+    const interval = window.setInterval(() => setClockTick(value => value + 1), 30000)
+    return () => {
+      unsubscribe()
+      window.clearInterval(interval)
+    }
   }, [])
 
   const save = (items: StoredReminder[]) => {
@@ -31,6 +54,7 @@ export function ReminderCenter({ onClose }: { onClose: () => void }) {
       dueAt: due.toISOString(),
       time: due.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
       completedAt: null,
+      lastNotifiedAt: null,
     })
   }
 
@@ -42,6 +66,7 @@ export function ReminderCenter({ onClose }: { onClose: () => void }) {
         dueAt: base.toISOString(),
         time: base.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
         done: false,
+        lastNotifiedAt: null,
       })
       return
     }
@@ -74,6 +99,7 @@ export function ReminderCenter({ onClose }: { onClose: () => void }) {
                 <span><Clock3 size={12} /> {item.time || 'No time set'}</span>
                 {item.completedAt && <small>Completed {new Date(item.completedAt).toLocaleString()}</small>}
               </div>
+              <span className="reminder-time-left">{formatTimeLeft(item.dueAt, item.done)}</span>
               <select
                 value={item.repeat ?? 'none'}
                 onChange={event => update(item.id, { repeat: event.target.value as StoredReminder['repeat'] })}
@@ -84,7 +110,7 @@ export function ReminderCenter({ onClose }: { onClose: () => void }) {
               </select>
               <button onClick={() => snooze(item, 10)}>10m</button>
               <button onClick={() => snooze(item, 60)}>1h</button>
-              <button className="danger" onClick={() => save(reminders.filter(reminder => reminder.id !== item.id))} title="Delete">
+              <button className="danger" onClick={() => { removeReminder(item.id); refresh() }} title="Delete">
                 <Trash2 size={13} />
               </button>
             </article>

@@ -58,6 +58,7 @@ export interface ElectronAPI {
   widgets: {
     open: (type: 'all' | 'note' | 'todo' | 'reminder') => Promise<void>
     scheduleReminder: (reminder: { id: string; text: string; dueAt: string }) => Promise<{ ok: boolean; error?: string }>
+    cancelReminder: (id: string) => Promise<{ ok: boolean }>
   }
   language: {
     refreshSpellchecker: () => Promise<void>
@@ -85,6 +86,7 @@ export interface ElectronAPI {
   on: {
     windowStateChange: (cb: (isMaximized: boolean) => void) => () => void
     themeChange: (cb: (isDark: boolean) => void) => () => void
+    reminderFired: (cb: (id: string) => void) => () => void
   }
 }
 

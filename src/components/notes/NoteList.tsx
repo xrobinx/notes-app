@@ -7,6 +7,7 @@ import { NoteCard } from './NoteCard'
 import type { Note } from '../../types'
 import { editorExtensions } from '../editor/extensions'
 import { LockNoteDialog } from '../modals/LockNoteDialog'
+import { NOTE_TEMPLATES, type NoteTemplate } from '../../utils/noteTemplates'
 import './NoteList.css'
 
 interface Props {
@@ -17,12 +18,13 @@ interface Props {
 }
 
 export function NoteList({ collapsed, onToggle, onSearchCleared, onSearchResultOpen }: Props) {
-  const { notes, selectedNoteId, unlockedNoteIds, createNote, deleteNote, restoreNote, permanentDeleteNote, emptyTrash, selectNote, pinNote, searchNotesAdvanced, lockNote, lockNoteGlobal, duplicateNote, reorderNotes } = useNotesStore()
+  const { notes, selectedNoteId, unlockedNoteIds, createNote, updateNote, deleteNote, restoreNote, permanentDeleteNote, emptyTrash, selectNote, pinNote, searchNotesAdvanced, lockNote, lockNoteGlobal, duplicateNote, reorderNotes } = useNotesStore()
   const { selectedFolderId, deletedFolders, loadTrash, restoreFolder, permanentDeleteFolder } = useFoldersStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Note[] | null>(null)
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
   const [noteToLock, setNoteToLock] = useState<Note | null>(null)
+  const [templateMenuOpen, setTemplateMenuOpen] = useState(false)
   const [searchFilters, setSearchFilters] = useState({ locked: false, attachments: false, checklists: false, dateRange: null as 'today' | 'week' | 'month' | null })
   const [scrollTop, setScrollTop] = useState(0)
   const listBodyRef = useRef<HTMLDivElement | null>(null)
@@ -33,6 +35,16 @@ export function NoteList({ collapsed, onToggle, onSearchCleared, onSearchResultO
   useEffect(() => {
     if (isTrash) void loadTrash()
   }, [isTrash, loadTrash])
+
+  useEffect(() => {
+    if (!templateMenuOpen) return undefined
+    const close = (event: PointerEvent) => {
+      if ((event.target as HTMLElement | null)?.closest('.new-note-menu-wrap')) return
+      setTemplateMenuOpen(false)
+    }
+    window.addEventListener('pointerdown', close)
+    return () => window.removeEventListener('pointerdown', close)
+  }, [templateMenuOpen])
 
   const handleSearch = async (q: string, filters = searchFilters) => {
     setSearchQuery(q)
@@ -48,10 +60,19 @@ export function NoteList({ collapsed, onToggle, onSearchCleared, onSearchResultO
     }
   }
 
-  const handleNewNote = async () => {
+  const handleNewNote = async (template?: NoteTemplate) => {
     const folderId = selectedFolderId === 'trash' || selectedFolderId === 'pinned' ? null : (selectedFolderId as string | null)
     const note = await createNote(folderId)
+    if (template) {
+      await updateNote(note.id, {
+        title: template.title,
+        emoji: template.emoji,
+        body: JSON.stringify(template.body),
+        plainText: template.plainText,
+      })
+    }
     selectNote(note.id)
+    setTemplateMenuOpen(false)
   }
 
   const displayNotes = searchResults ?? notes
@@ -133,13 +154,29 @@ export function NoteList({ collapsed, onToggle, onSearchCleared, onSearchResultO
 
         <div className="note-list-actions">
           {!isTrash && (
-            <button
-              className="note-list-btn"
-              onClick={handleNewNote}
-              title="New note"
-            >
-              <Plus size={16} />
-            </button>
+            <div className="new-note-menu-wrap">
+              <button
+                className={`note-list-btn ${templateMenuOpen ? 'active' : ''}`}
+                onClick={() => setTemplateMenuOpen(value => !value)}
+                title="New note"
+              >
+                <Plus size={16} />
+              </button>
+              {templateMenuOpen && (
+                <div className="new-note-template-menu">
+                  <button onClick={() => handleNewNote()}>
+                    <strong>Blank note</strong>
+                    <span>Start clean</span>
+                  </button>
+                  {NOTE_TEMPLATES.map(template => (
+                    <button key={template.key} onClick={() => handleNewNote(template)}>
+                      <strong>{template.emoji} {template.title}</strong>
+                      <span>{template.description}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
           {isTrash && notes.length > 0 && (
             <button

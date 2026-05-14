@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bell, CalendarClock, Check, CheckSquare, ListChecks, StickyNote, Trash2, X } from 'lucide-react'
 import { useSettingsStore } from '../../store/settingsStore'
 import { getTranslationLanguage } from '../../utils/languages'
-import { readAllReminders, scheduleStoredReminder, writeAllReminders } from '../../utils/reminderStorage'
+import { markReminderNotified, readAllReminders, removeReminder, scheduleStoredReminder, subscribeToReminderChanges, writeAllReminders } from '../../utils/reminderStorage'
 import './DesktopWidget.css'
 
 export type WidgetType = 'all' | 'note' | 'todo' | 'reminder'
@@ -53,6 +53,8 @@ export function DesktopWidget({ type }: Props) {
   const [editingTodoId, setEditingTodoId] = useState<string | null>(null)
   const [editingReminderId, setEditingReminderId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
+  const [loaded, setLoaded] = useState(false)
+  const remindersFromExternal = useRef(false)
   const language = getTranslationLanguage(settings.translationLanguage)
 
   useEffect(() => {
@@ -60,22 +62,45 @@ export function DesktopWidget({ type }: Props) {
   }, [settings])
 
   useEffect(() => {
-    const saved = localStorage.getItem(storageKey)
-    if (!saved) return
-    try {
-      const data = JSON.parse(saved)
-      setNote(data.note ?? '')
-      setTodos(data.todos ?? [])
-      setReminders(type === 'reminder' || type === 'all' ? readAllReminders() : data.reminders ?? [])
-    } catch {
-      // Ignore older or broken widget data.
-    }
-  }, [storageKey])
+    return window.api.on.reminderFired(markReminderNotified)
+  }, [])
 
   useEffect(() => {
+    const saved = localStorage.getItem(storageKey)
+    if (saved) {
+      try {
+        const data = JSON.parse(saved)
+        setNote(data.note ?? '')
+        setTodos(data.todos ?? [])
+        setReminders(type === 'reminder' || type === 'all' ? readAllReminders() : data.reminders ?? [])
+      } catch {
+        // Ignore older or broken widget data.
+      }
+    } else if (type === 'reminder' || type === 'all') {
+      setReminders(readAllReminders())
+    }
+    setLoaded(true)
+  }, [storageKey, type])
+
+  useEffect(() => {
+    if (!loaded) return
     localStorage.setItem(storageKey, JSON.stringify({ note, todos, reminders }))
-    if (type === 'reminder' || type === 'all') writeAllReminders(reminders)
-  }, [storageKey, note, todos, reminders])
+    if (type === 'reminder' || type === 'all') {
+      if (remindersFromExternal.current) {
+        remindersFromExternal.current = false
+      } else {
+        writeAllReminders(reminders)
+      }
+    }
+  }, [storageKey, note, todos, reminders, loaded, type])
+
+  useEffect(() => {
+    if (type !== 'reminder' && type !== 'all') return undefined
+    return subscribeToReminderChanges(() => {
+      remindersFromExternal.current = true
+      setReminders(readAllReminders())
+    })
+  }, [type])
 
   useEffect(() => {
     reminders.forEach(item => {
@@ -311,7 +336,10 @@ export function DesktopWidget({ type }: Props) {
                   {item.time && <strong>{item.time}</strong>}
                   <button
                     className="widget-item-delete"
-                    onClick={() => setReminders(items => items.filter(reminder => reminder.id !== item.id))}
+                    onClick={() => {
+                      removeReminder(item.id)
+                      setReminders(readAllReminders())
+                    }}
                     title="Delete reminder"
                   >
                     <Trash2 size={12} />
