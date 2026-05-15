@@ -436,7 +436,7 @@
 }
 
 .free-canvas-block.is-selected {
-  box-shadow: 0 0 0 1px var(--accent);
+  box-shadow: none;
 }
 
 .free-canvas-block:focus {
@@ -545,9 +545,7 @@
 }
 
 .canvas-item.selected {
-  outline: 1px solid var(--accent);
-  outline-offset: 4px;
-  border-radius: 8px;
+  outline: none;
 }
 
 .canvas-item textarea {
@@ -568,14 +566,49 @@
   line-height: 1;
 }
 
-.canvas-item-arrow span {
-  display: inline-block;
-  min-width: 64px;
-  font-size: 64px;
-  line-height: 0.86;
-  color: var(--accent);
-  font-family: "Segoe UI Symbol", "Segoe UI", sans-serif;
+.canvas-item-arrow {
+  width: 1px;
+  height: 1px;
+}
+
+.canvas-arrow-svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.canvas-arrow-svg line,
+.canvas-arrow-svg polyline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
   filter: drop-shadow(0 2px 5px rgba(0,0,0,0.28));
+}
+
+.canvas-arrow-resize {
+  position: absolute;
+  left: -7px;
+  top: -7px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--accent);
+  border-radius: 999px;
+  background: #242426;
+  opacity: 0;
+  cursor: grab;
+}
+
+.canvas-item-arrow.selected .canvas-arrow-resize,
+.canvas-item-arrow:hover .canvas-arrow-resize {
+  opacity: 0.82;
+}
+
+.canvas-arrow-resize:active {
+  cursor: grabbing;
 }
 
 .canvas-item-image img {

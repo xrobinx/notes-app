@@ -3,7 +3,7 @@ import { Node, mergeAttributes } from '@tiptap/core'
 import { NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
 import {
-  ArrowRight, Eraser, Highlighter, Image, MousePointer2, PenLine, Smile, Trash2, Type,
+  ArrowRight, Eraser, Highlighter, Image, MousePointer2, PenLine, Smile, Type,
 } from 'lucide-react'
 
 type ArrowKind =
@@ -27,12 +27,13 @@ type ArrowKind =
 type CanvasItem =
   | { id: string; type: 'text'; x: number; y: number; text: string }
   | { id: string; type: 'sticker'; x: number; y: number; text: string }
-  | { id: string; type: 'arrow'; x: number; y: number; arrow: ArrowKind }
+  | { id: string; type: 'arrow'; x: number; y: number; arrow: ArrowKind; length?: number; angle?: number }
   | { id: string; type: 'image'; x: number; y: number; src: string; width: number }
 
 type Stroke = { id: string; color: string; width: number; points: [number, number][] }
 type Tool = 'select' | 'pen' | 'highlight' | 'erase' | 'placeArrow' | 'placeSticker'
 type ResizeEdge = 'bottom' | 'right' | 'corner'
+type ArrowDraft = { id: string; x: number; y: number; length: number; angle: number } | null
 
 const STICKERS = [
   '\u2B50', '\u2705', '\u{1F525}', '\u{1F4A1}', '\u{1F4CC}', '\u2764\uFE0F', '\u26A0\uFE0F', '\u2753',
@@ -72,7 +73,37 @@ function parseStrokes(value: unknown): Stroke[] {
   try { return JSON.parse(value) as Stroke[] } catch { return [] }
 }
 
-function FreeCanvasView({ node, selected, updateAttributes }: NodeViewProps) {
+function getArrowAngle(kind: ArrowKind): number {
+  const angles: Record<ArrowKind, number> = {
+    right: 0,
+    left: 180,
+    up: -90,
+    down: 90,
+    upRight: -45,
+    upLeft: -135,
+    downRight: 45,
+    downLeft: 135,
+    doubleHorizontal: 0,
+    doubleVertical: 90,
+    longRight: 0,
+    longLeft: 180,
+    turnRight: 0,
+    turnLeft: 180,
+    heavyRight: 0,
+    heavyLeft: 180,
+  }
+  return angles[kind] ?? 0
+}
+
+function pointerPoint(event: React.PointerEvent<HTMLElement>, surface: HTMLElement): { x: number; y: number } {
+  const rect = surface.getBoundingClientRect()
+  return {
+    x: Math.max(0, Math.round(event.clientX - rect.left)),
+    y: Math.max(0, Math.round(event.clientY - rect.top)),
+  }
+}
+
+function FreeCanvasView({ node, selected, updateAttributes, editor }: NodeViewProps) {
   const items = parseItems(node.attrs.items)
   const strokes = parseStrokes(node.attrs.strokes)
   const height = Number(node.attrs.height || 420)
@@ -85,8 +116,12 @@ function FreeCanvasView({ node, selected, updateAttributes }: NodeViewProps) {
   const [stickerPickerOpen, setStickerPickerOpen] = useState(false)
   const [activeArrow, setActiveArrow] = useState<ArrowKind>('right')
   const [activeSticker, setActiveSticker] = useState(STICKERS[0])
+  const [arrowDraft, setArrowDraft] = useState<ArrowDraft>(null)
+  const arrowDraftRef = useRef<ArrowDraft>(null)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const surfaceRef = useRef<HTMLDivElement | null>(null)
   const drawing = useRef<Stroke | null>(null)
+  const arrowStart = useRef<{ id: string; x: number; y: number } | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const resizeEdge = useRef<ResizeEdge | null>(null)
   const resizeStart = useRef({ x: 0, y: 0, width: 0, height: 0 })
@@ -99,6 +134,11 @@ function FreeCanvasView({ node, selected, updateAttributes }: NodeViewProps) {
     setSelectedId(id)
   }
 
+  const setCurrentArrowDraft = (draft: ArrowDraft) => {
+    arrowDraftRef.current = draft
+    setArrowDraft(draft)
+  }
+
   const deleteSelected = () => {
     if (!selectedId) return
     saveItems(items.filter(item => item.id !== selectedId))
@@ -107,27 +147,31 @@ function FreeCanvasView({ node, selected, updateAttributes }: NodeViewProps) {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!selectedId) return
       if (!wrapperRef.current?.contains(document.activeElement)) return
-      if (event.key !== 'Delete' && event.key !== 'Backspace') return
       const target = event.target as HTMLElement | null
       if (target?.tagName === 'TEXTAREA' || target?.tagName === 'INPUT') return
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+        event.preventDefault()
+        if (event.shiftKey) editor.commands.redo()
+        else editor.commands.undo()
+        return
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+        event.preventDefault()
+        editor.commands.redo()
+        return
+      }
+      if (!selectedId) return
+      if (event.key !== 'Delete' && event.key !== 'Backspace') return
       event.preventDefault()
       deleteSelected()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [selectedId, items])
+  }, [selectedId, items, editor])
 
   const placeAtPointer = (event: React.PointerEvent<HTMLDivElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect()
-    const x = Math.max(0, Math.round(event.clientX - rect.left))
-    const y = Math.max(0, Math.round(event.clientY - rect.top))
-    if (tool === 'placeArrow') {
-      addItem({ type: 'arrow', x, y, arrow: activeArrow })
-      setTool('select')
-      return true
-    }
+    const { x, y } = pointerPoint(event, event.currentTarget)
     if (tool === 'placeSticker') {
       addItem({ type: 'sticker', x, y, text: activeSticker })
       setTool('select')
@@ -137,7 +181,16 @@ function FreeCanvasView({ node, selected, updateAttributes }: NodeViewProps) {
   }
 
   const startDraw = (event: React.PointerEvent<HTMLDivElement>) => {
+    wrapperRef.current?.focus()
     setSelectedId(null)
+    if (tool === 'placeArrow') {
+      const point = pointerPoint(event, event.currentTarget)
+      const id = crypto.randomUUID()
+      arrowStart.current = { id, ...point }
+      setCurrentArrowDraft({ id, x: point.x, y: point.y, length: 86, angle: getArrowAngle(activeArrow) })
+      event.currentTarget.setPointerCapture(event.pointerId)
+      return
+    }
     if (placeAtPointer(event)) return
     if (tool === 'select') return
     const rect = event.currentTarget.getBoundingClientRect()
@@ -156,6 +209,16 @@ function FreeCanvasView({ node, selected, updateAttributes }: NodeViewProps) {
   }
 
   const continueDraw = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (arrowStart.current) {
+      const start = arrowStart.current
+      const point = pointerPoint(event, event.currentTarget)
+      const dx = point.x - start.x
+      const dy = point.y - start.y
+      const length = Math.max(24, Math.round(Math.hypot(dx, dy)))
+      const angle = Math.round(Math.atan2(dy, dx) * 180 / Math.PI)
+      setCurrentArrowDraft({ id: start.id, x: start.x, y: start.y, length, angle })
+      return
+    }
     if (!drawing.current) return
     const rect = event.currentTarget.getBoundingClientRect()
     drawing.current = {
@@ -197,9 +260,39 @@ function FreeCanvasView({ node, selected, updateAttributes }: NodeViewProps) {
     }
   }
 
-  const renderArrow = (kind: ArrowKind) => {
-    const config = ARROWS.find(item => item.key === kind) ?? ARROWS[0]
-    return <span>{config.symbol}</span>
+  const finishArrowDraft = () => {
+    const draft = arrowDraftRef.current
+    if (!draft) return
+    saveItems([...items, {
+      id: draft.id,
+      type: 'arrow',
+      x: draft.x,
+      y: draft.y,
+      arrow: activeArrow,
+      length: draft.length,
+      angle: draft.angle,
+    }])
+    setSelectedId(draft.id)
+    setCurrentArrowDraft(null)
+    arrowStart.current = null
+    setTool('select')
+  }
+
+  const renderArrowLine = (item: Extract<CanvasItem, { type: 'arrow' }>) => {
+    const length = Math.max(24, item.length ?? 86)
+    const angle = item.angle ?? getArrowAngle(item.arrow)
+    return (
+      <svg
+        className="canvas-arrow-svg"
+        width={length + 18}
+        height="28"
+        viewBox={`0 0 ${length + 18} 28`}
+        style={{ transform: `translateY(-14px) rotate(${angle}deg)`, transformOrigin: '9px 14px' }}
+      >
+        <line x1="9" y1="14" x2={length} y2="14" />
+        <polyline points={`${length - 10},5 ${length + 2},14 ${length - 10},23`} />
+      </svg>
+    )
   }
 
   return (
@@ -256,11 +349,6 @@ function FreeCanvasView({ node, selected, updateAttributes }: NodeViewProps) {
           )}
         </div>
         <button onClick={() => fileInputRef.current?.click()} title="Add image"><Image size={13} /></button>
-        {selectedId && (
-          <button onClick={deleteSelected} title="Delete selected object">
-            <Trash2 size={13} />
-          </button>
-        )}
         <input
           ref={fileInputRef}
           type="file"
@@ -279,9 +367,13 @@ function FreeCanvasView({ node, selected, updateAttributes }: NodeViewProps) {
       <div
         className={`free-canvas-surface tool-${tool}`}
         style={{ height }}
+        ref={surfaceRef}
         onPointerDown={startDraw}
         onPointerMove={continueDraw}
-        onPointerUp={() => { drawing.current = null }}
+        onPointerUp={() => {
+          if (arrowStart.current) finishArrowDraft()
+          drawing.current = null
+        }}
       >
         <svg className="free-canvas-drawing" width="100%" height="100%">
           {strokes.map(stroke => (
@@ -296,6 +388,11 @@ function FreeCanvasView({ node, selected, updateAttributes }: NodeViewProps) {
             />
           ))}
         </svg>
+        {arrowDraft && (
+          <div className="canvas-item canvas-item-arrow canvas-arrow-draft" style={{ left: arrowDraft.x, top: arrowDraft.y }}>
+            {renderArrowLine({ id: arrowDraft.id, type: 'arrow', x: arrowDraft.x, y: arrowDraft.y, arrow: activeArrow, length: arrowDraft.length, angle: arrowDraft.angle })}
+          </div>
+        )}
         {items.map(item => (
           <div
             key={item.id}
@@ -330,7 +427,43 @@ function FreeCanvasView({ node, selected, updateAttributes }: NodeViewProps) {
               />
             )}
             {item.type === 'sticker' && <span>{item.text}</span>}
-            {item.type === 'arrow' && renderArrow(item.arrow)}
+            {item.type === 'arrow' && (
+              <>
+                {renderArrowLine(item)}
+                {selectedId === item.id && (
+                  <button
+                    className="canvas-arrow-resize"
+                    style={{
+                      transform: `translate(${Math.cos(((item.angle ?? getArrowAngle(item.arrow)) * Math.PI) / 180) * (item.length ?? 86)}px, ${Math.sin(((item.angle ?? getArrowAngle(item.arrow)) * Math.PI) / 180) * (item.length ?? 86)}px)`,
+                    }}
+                    onPointerDown={event => {
+                      event.stopPropagation()
+                      const surface = surfaceRef.current
+                      if (!surface) return
+                      const origin = { x: item.x, y: item.y }
+                      event.currentTarget.setPointerCapture(event.pointerId)
+                      const move = (moveEvent: PointerEvent) => {
+                        const rect = surface.getBoundingClientRect()
+                        const x = Math.max(0, Math.round(moveEvent.clientX - rect.left))
+                        const y = Math.max(0, Math.round(moveEvent.clientY - rect.top))
+                        const dx = x - origin.x
+                        const dy = y - origin.y
+                        const length = Math.max(24, Math.round(Math.hypot(dx, dy)))
+                        const angle = Math.round(Math.atan2(dy, dx) * 180 / Math.PI)
+                        saveItems(items.map(candidate => candidate.id === item.id ? { ...item, length, angle } : candidate))
+                      }
+                      const up = () => {
+                        window.removeEventListener('pointermove', move)
+                        window.removeEventListener('pointerup', up)
+                      }
+                      window.addEventListener('pointermove', move)
+                      window.addEventListener('pointerup', up)
+                    }}
+                    title="Drag to resize and rotate"
+                  />
+                )}
+              </>
+            )}
             {item.type === 'image' && <img src={item.src} alt="" draggable={false} />}
           </div>
         ))}
