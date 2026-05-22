@@ -104,10 +104,13 @@ function pointerPoint(event: React.PointerEvent<HTMLElement>, surface: HTMLEleme
 }
 
 function FreeCanvasView({ node, selected, updateAttributes, editor }: NodeViewProps) {
-  const items = parseItems(node.attrs.items)
-  const strokes = parseStrokes(node.attrs.strokes)
-  const height = Number(node.attrs.height || 420)
-  const width = Number(node.attrs.width || 0)
+  const parsedItems = parseItems(node.attrs.items)
+  const parsedStrokes = parseStrokes(node.attrs.strokes)
+  const attrHeight = Number(node.attrs.height || 420)
+  const attrWidth = Number(node.attrs.width || 0)
+  const [canvasItems, setCanvasItems] = useState<CanvasItem[]>(parsedItems)
+  const [canvasStrokes, setCanvasStrokes] = useState<Stroke[]>(parsedStrokes)
+  const [canvasSize, setCanvasSize] = useState({ width: attrWidth, height: attrHeight })
   const [tool, setTool] = useState<Tool>('select')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [dragId, setDragId] = useState<string | null>(null)
@@ -120,17 +123,65 @@ function FreeCanvasView({ node, selected, updateAttributes, editor }: NodeViewPr
   const arrowDraftRef = useRef<ArrowDraft>(null)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const surfaceRef = useRef<HTMLDivElement | null>(null)
+  const itemsRef = useRef<CanvasItem[]>(parsedItems)
+  const strokesRef = useRef<Stroke[]>(parsedStrokes)
   const drawing = useRef<Stroke | null>(null)
   const arrowStart = useRef<{ id: string; x: number; y: number } | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const resizeEdge = useRef<ResizeEdge | null>(null)
-  const resizeStart = useRef({ x: 0, y: 0, width: 0, height: 0 })
+  const resizeStart = useRef({ x: 0, y: 0, width: attrWidth, height: attrHeight })
+  const sizeRef = useRef({ width: attrWidth, height: attrHeight })
 
-  const saveItems = (next: CanvasItem[]) => updateAttributes({ items: JSON.stringify(next) })
-  const saveStrokes = (next: Stroke[]) => updateAttributes({ strokes: JSON.stringify(next) })
+  useEffect(() => {
+    const next = parseItems(node.attrs.items)
+    itemsRef.current = next
+    setCanvasItems(next)
+  }, [node.attrs.items])
+
+  useEffect(() => {
+    const next = parseStrokes(node.attrs.strokes)
+    strokesRef.current = next
+    setCanvasStrokes(next)
+  }, [node.attrs.strokes])
+
+  useEffect(() => {
+    const next = { width: attrWidth, height: attrHeight }
+    sizeRef.current = next
+    setCanvasSize(next)
+  }, [attrWidth, attrHeight])
+
+  const stageItems = (next: CanvasItem[]) => {
+    itemsRef.current = next
+    setCanvasItems(next)
+  }
+
+  const commitItems = (next = itemsRef.current) => {
+    stageItems(next)
+    updateAttributes({ items: JSON.stringify(next) })
+  }
+
+  const stageStrokes = (next: Stroke[]) => {
+    strokesRef.current = next
+    setCanvasStrokes(next)
+  }
+
+  const commitStrokes = (next = strokesRef.current) => {
+    stageStrokes(next)
+    updateAttributes({ strokes: JSON.stringify(next) })
+  }
+
+  const stageCanvasSize = (next: { width: number; height: number }) => {
+    sizeRef.current = next
+    setCanvasSize(next)
+  }
+
+  const commitCanvasSize = () => {
+    updateAttributes(sizeRef.current)
+  }
+
   const addItem = (item: Omit<CanvasItem, 'id'>) => {
     const id = crypto.randomUUID()
-    saveItems([...items, { ...item, id } as CanvasItem])
+    commitItems([...itemsRef.current, { ...item, id } as CanvasItem])
     setSelectedId(id)
   }
 
@@ -141,7 +192,7 @@ function FreeCanvasView({ node, selected, updateAttributes, editor }: NodeViewPr
 
   const deleteSelected = () => {
     if (!selectedId) return
-    saveItems(items.filter(item => item.id !== selectedId))
+    commitItems(itemsRef.current.filter(item => item.id !== selectedId))
     setSelectedId(null)
   }
 
@@ -168,7 +219,7 @@ function FreeCanvasView({ node, selected, updateAttributes, editor }: NodeViewPr
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [selectedId, items, editor])
+  }, [selectedId, editor])
 
   const placeAtPointer = (event: React.PointerEvent<HTMLDivElement>) => {
     const { x, y } = pointerPoint(event, event.currentTarget)
@@ -196,7 +247,7 @@ function FreeCanvasView({ node, selected, updateAttributes, editor }: NodeViewPr
     const rect = event.currentTarget.getBoundingClientRect()
     const point: [number, number] = [event.clientX - rect.left, event.clientY - rect.top]
     if (tool === 'erase') {
-      saveStrokes(strokes.filter(stroke => !stroke.points.some(([x, y]) => Math.hypot(x - point[0], y - point[1]) < 18)))
+      commitStrokes(strokesRef.current.filter(stroke => !stroke.points.some(([x, y]) => Math.hypot(x - point[0], y - point[1]) < 18)))
       return
     }
     drawing.current = {
@@ -225,7 +276,7 @@ function FreeCanvasView({ node, selected, updateAttributes, editor }: NodeViewPr
       ...drawing.current,
       points: [...drawing.current.points, [event.clientX - rect.left, event.clientY - rect.top]],
     }
-    saveStrokes([...strokes.filter(stroke => stroke.id !== drawing.current!.id), drawing.current])
+    stageStrokes([...strokesRef.current.filter(stroke => stroke.id !== drawing.current!.id), drawing.current])
   }
 
   const beginResize = (event: React.PointerEvent<HTMLButtonElement>, edge: ResizeEdge) => {
@@ -235,26 +286,27 @@ function FreeCanvasView({ node, selected, updateAttributes, editor }: NodeViewPr
     resizeStart.current = {
       x: event.clientX,
       y: event.clientY,
-      width: event.currentTarget.closest('.free-canvas-block')?.getBoundingClientRect().width ?? width,
-      height,
+      width: event.currentTarget.closest('.free-canvas-block')?.getBoundingClientRect().width ?? sizeRef.current.width,
+      height: sizeRef.current.height,
     }
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
   const resizeCanvas = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (!resizeEdge.current) return
-    const next: Record<string, number> = {}
+    const next = { ...sizeRef.current }
     if (resizeEdge.current === 'bottom' || resizeEdge.current === 'corner') {
       next.height = Math.max(260, Math.min(1200, Math.round(resizeStart.current.height + event.clientY - resizeStart.current.y)))
     }
     if (resizeEdge.current === 'right' || resizeEdge.current === 'corner') {
       next.width = Math.max(420, Math.min(1600, Math.round(resizeStart.current.width + event.clientX - resizeStart.current.x)))
     }
-    updateAttributes(next)
+    stageCanvasSize(next)
   }
 
   const endResize = (event: React.PointerEvent<HTMLButtonElement>) => {
     resizeEdge.current = null
+    commitCanvasSize()
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId)
     }
@@ -263,7 +315,7 @@ function FreeCanvasView({ node, selected, updateAttributes, editor }: NodeViewPr
   const finishArrowDraft = () => {
     const draft = arrowDraftRef.current
     if (!draft) return
-    saveItems([...items, {
+    commitItems([...itemsRef.current, {
       id: draft.id,
       type: 'arrow',
       x: draft.x,
@@ -299,7 +351,7 @@ function FreeCanvasView({ node, selected, updateAttributes, editor }: NodeViewPr
     <NodeViewWrapper
       ref={wrapperRef}
       className={`free-canvas-block ${selected ? 'is-selected' : ''}`}
-      style={width ? { width } : undefined}
+      style={canvasSize.width ? { width: canvasSize.width } : undefined}
       contentEditable={false}
       tabIndex={0}
     >
@@ -366,17 +418,18 @@ function FreeCanvasView({ node, selected, updateAttributes, editor }: NodeViewPr
       </div>
       <div
         className={`free-canvas-surface tool-${tool}`}
-        style={{ height }}
+        style={{ height: canvasSize.height }}
         ref={surfaceRef}
         onPointerDown={startDraw}
         onPointerMove={continueDraw}
         onPointerUp={() => {
           if (arrowStart.current) finishArrowDraft()
+          if (drawing.current) commitStrokes()
           drawing.current = null
         }}
       >
         <svg className="free-canvas-drawing" width="100%" height="100%">
-          {strokes.map(stroke => (
+          {canvasStrokes.map(stroke => (
             <polyline
               key={stroke.id}
               points={stroke.points.map(point => point.join(',')).join(' ')}
@@ -393,7 +446,7 @@ function FreeCanvasView({ node, selected, updateAttributes, editor }: NodeViewPr
             {renderArrowLine({ id: arrowDraft.id, type: 'arrow', x: arrowDraft.x, y: arrowDraft.y, arrow: activeArrow, length: arrowDraft.length, angle: arrowDraft.angle })}
           </div>
         )}
-        {items.map(item => (
+        {canvasItems.map(item => (
           <div
             key={item.id}
             className={`canvas-item canvas-item-${item.type} ${selectedId === item.id ? 'selected' : ''}`}
@@ -409,21 +462,24 @@ function FreeCanvasView({ node, selected, updateAttributes, editor }: NodeViewPr
             }}
             onPointerMove={event => {
               if (dragId !== item.id) return
-              saveItems(items.map(candidate => candidate.id === item.id
+              stageItems(itemsRef.current.map(candidate => candidate.id === item.id
                 ? { ...candidate, x: Math.max(0, dragStart.itemX + event.clientX - dragStart.x), y: Math.max(0, dragStart.itemY + event.clientY - dragStart.y) } as CanvasItem
                 : candidate))
             }}
-            onPointerUp={() => setDragId(null)}
+            onPointerUp={() => {
+              if (dragId === item.id) commitItems()
+              setDragId(null)
+            }}
             onDoubleClick={event => {
               event.stopPropagation()
               if (item.type === 'text') return
-              saveItems(items.filter(candidate => candidate.id !== item.id))
+              commitItems(itemsRef.current.filter(candidate => candidate.id !== item.id))
             }}
           >
             {item.type === 'text' && (
               <textarea
                 value={item.text}
-                onChange={event => saveItems(items.map(candidate => candidate.id === item.id ? { ...item, text: event.target.value } : candidate))}
+                onChange={event => commitItems(itemsRef.current.map(candidate => candidate.id === item.id ? { ...item, text: event.target.value } : candidate))}
               />
             )}
             {item.type === 'sticker' && <span>{item.text}</span>}
@@ -450,9 +506,10 @@ function FreeCanvasView({ node, selected, updateAttributes, editor }: NodeViewPr
                         const dy = y - origin.y
                         const length = Math.max(24, Math.round(Math.hypot(dx, dy)))
                         const angle = Math.round(Math.atan2(dy, dx) * 180 / Math.PI)
-                        saveItems(items.map(candidate => candidate.id === item.id ? { ...item, length, angle } : candidate))
+                        stageItems(itemsRef.current.map(candidate => candidate.id === item.id ? { ...candidate, length, angle } as CanvasItem : candidate))
                       }
                       const up = () => {
+                        commitItems()
                         window.removeEventListener('pointermove', move)
                         window.removeEventListener('pointerup', up)
                       }

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Image from '@tiptap/extension-image'
 import { mergeAttributes } from '@tiptap/core'
 import { NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react'
@@ -23,6 +23,31 @@ function ResizableImageView({ node, selected, updateAttributes }: NodeViewProps)
   const radius = Number(node.attrs.radius ?? 6)
   const crop = Boolean(node.attrs.crop)
   const caption = node.attrs.caption || ''
+  const [draftWidth, setDraftWidth] = useState(width)
+  const [draftPosition, setDraftPosition] = useState({ x: freeX, y: freeY })
+  const draftWidthRef = useRef(width)
+  const draftPositionRef = useRef({ x: freeX, y: freeY })
+
+  useEffect(() => {
+    draftWidthRef.current = width
+    setDraftWidth(width)
+  }, [width])
+
+  useEffect(() => {
+    const next = { x: freeX, y: freeY }
+    draftPositionRef.current = next
+    setDraftPosition(next)
+  }, [freeX, freeY])
+
+  const stageWidth = useCallback((next: string) => {
+    draftWidthRef.current = next
+    setDraftWidth(next)
+  }, [])
+
+  const stagePosition = useCallback((next: { x: number; y: number }) => {
+    draftPositionRef.current = next
+    setDraftPosition(next)
+  }, [])
 
   const beginResize = useCallback((event: React.PointerEvent<HTMLButtonElement>, handleSide: 'left' | 'right') => {
     event.preventDefault()
@@ -45,13 +70,18 @@ function ResizableImageView({ node, selected, updateAttributes }: NodeViewProps)
       ? startWidth.current + delta
       : startWidth.current - delta
 
-    updateAttributes({ width: `${Math.max(120, Math.round(nextWidth))}px` })
-  }, [updateAttributes])
+    stageWidth(`${Math.max(120, Math.round(nextWidth))}px`)
+  }, [stageWidth])
 
   const endResize = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+    if (startWidth.current) {
+      updateAttributes({ width: draftWidthRef.current })
+    }
     startWidth.current = 0
-    event.currentTarget.releasePointerCapture(event.pointerId)
-  }, [])
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+  }, [updateAttributes])
 
   const beginMove = useCallback((event: React.PointerEvent<HTMLElement>) => {
     if (!free) return
@@ -69,23 +99,26 @@ function ResizableImageView({ node, selected, updateAttributes }: NodeViewProps)
 
   const move = useCallback((event: React.PointerEvent<HTMLElement>) => {
     if (!isMoving.current) return
-    updateAttributes({
+    stagePosition({
       x: Math.max(0, Math.round(startFreeX.current + event.clientX - startX.current)),
       y: Math.max(0, Math.round(startFreeY.current + event.clientY - startY.current)),
     })
-  }, [updateAttributes])
+  }, [stagePosition])
 
   const endMove = useCallback((event: React.PointerEvent<HTMLElement>) => {
     if (!isMoving.current) return
     isMoving.current = false
-    event.currentTarget.releasePointerCapture(event.pointerId)
-  }, [])
+    updateAttributes(draftPositionRef.current)
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+  }, [updateAttributes])
 
   return (
     <NodeViewWrapper
       as="figure"
       className={`resizable-image align-${align} ${selected ? 'is-selected' : ''} ${free ? 'free-placement' : ''}`}
-      style={free ? { width, left: freeX, top: freeY } : { width }}
+      style={free ? { width: draftWidth, left: draftPosition.x, top: draftPosition.y } : { width: draftWidth }}
       draggable
       onPointerDown={beginMove}
       onPointerMove={move}

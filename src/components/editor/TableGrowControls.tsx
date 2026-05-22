@@ -21,6 +21,8 @@ export function TableGrowControls({ editor, container }: Props) {
   const [armedControl, setArmedControl] = useState<'column' | 'row' | null>(null)
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const armTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const rectRef = useRef<TableRect | null>(null)
+  const rectRaf = useRef<number | null>(null)
 
   const clearTimers = () => {
     if (previewTimer.current) {
@@ -53,9 +55,23 @@ export function TableGrowControls({ editor, container }: Props) {
     setArmedControl(null)
   }
 
-  const updateRect = useCallback(() => {
+  const setMeasuredRect = (next: TableRect | null) => {
+    const current = rectRef.current
+    if (
+      current === next
+      || (current && next
+        && Math.abs(current.top - next.top) < 0.5
+        && Math.abs(current.left - next.left) < 0.5
+        && Math.abs(current.width - next.width) < 0.5
+        && Math.abs(current.height - next.height) < 0.5)
+    ) return
+    rectRef.current = next
+    setRect(next)
+  }
+
+  const updateRectNow = useCallback(() => {
     if (!container || !editor.isActive('table')) {
-      setRect(null)
+      setMeasuredRect(null)
       return
     }
 
@@ -65,14 +81,14 @@ export function TableGrowControls({ editor, container }: Props) {
     const table = focusedCell?.closest('table') as HTMLTableElement | null
 
     if (!table) {
-      setRect(null)
+      setMeasuredRect(null)
       return
     }
 
     const tableRect = table.getBoundingClientRect()
     const containerRect = container.getBoundingClientRect()
 
-    setRect({
+    setMeasuredRect({
       top: tableRect.top - containerRect.top + container.scrollTop,
       left: tableRect.left - containerRect.left + container.scrollLeft,
       width: tableRect.width,
@@ -80,8 +96,16 @@ export function TableGrowControls({ editor, container }: Props) {
     })
   }, [container, editor])
 
+  const updateRect = useCallback(() => {
+    if (rectRaf.current !== null) return
+    rectRaf.current = requestAnimationFrame(() => {
+      rectRaf.current = null
+      updateRectNow()
+    })
+  }, [updateRectNow])
+
   useEffect(() => {
-    updateRect()
+    updateRectNow()
     editor.on('selectionUpdate', updateRect)
     editor.on('transaction', updateRect)
     window.addEventListener('resize', updateRect)
@@ -89,6 +113,7 @@ export function TableGrowControls({ editor, container }: Props) {
 
     return () => {
       clearTimers()
+      if (rectRaf.current !== null) cancelAnimationFrame(rectRaf.current)
       editor.off('selectionUpdate', updateRect)
       editor.off('transaction', updateRect)
       window.removeEventListener('resize', updateRect)

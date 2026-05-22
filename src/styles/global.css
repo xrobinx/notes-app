@@ -32,8 +32,19 @@ body {
 .tiptap, .tiptap * { user-select: text; }
 input, textarea { user-select: text; }
 
-/* Transitions */
-* { transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
+/* Transitions: keep them targeted so editor drags and table work stay crisp. */
+button,
+input,
+textarea,
+select,
+.sidebar-item,
+.note-card,
+.toolbar-btn,
+.editor-header-action,
+.settings-action-btn,
+.settings-secondary-btn {
+  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
+}
 
 /* Focus visible */
 :focus-visible { outline: none; }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type UIEvent } from 'react'
 import { generateHTML } from '@tiptap/html'
 import { Folder, Plus, Search, LayoutList, LayoutGrid, Trash2, RotateCcw, X } from 'lucide-react'
 import { useNotesStore } from '../../store/notesStore'
@@ -26,6 +26,10 @@ export function NoteList({ collapsed, onToggle, onSearchCleared, onSearchResultO
   const [searchFilters, setSearchFilters] = useState({ locked: false, attachments: false, checklists: false, dateRange: null as 'today' | 'week' | 'month' | null })
   const [scrollTop, setScrollTop] = useState(0)
   const listBodyRef = useRef<HTMLDivElement | null>(null)
+  const pendingScrollTopRef = useRef(0)
+  const scrollRafRef = useRef<number | null>(null)
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchRequestRef = useRef(0)
   const isTrash = selectedFolderId === 'trash'
   const rowHeight = 74
   const overscan = 8
@@ -34,18 +38,42 @@ export function NoteList({ collapsed, onToggle, onSearchCleared, onSearchResultO
     if (isTrash) void loadTrash()
   }, [isTrash, loadTrash])
 
-  const handleSearch = async (q: string, filters = searchFilters) => {
+  useEffect(() => () => {
+    if (scrollRafRef.current !== null) cancelAnimationFrame(scrollRafRef.current)
+    if (searchTimerRef.current !== null) clearTimeout(searchTimerRef.current)
+  }, [])
+
+  const runSearch = async (q: string, filters: typeof searchFilters, requestId: number) => {
+    const folderId = typeof selectedFolderId === 'string' && !selectedFolderId.startsWith('smart:') && selectedFolderId !== 'trash' && selectedFolderId !== 'pinned'
+      ? selectedFolderId
+      : null
+    const results = await searchNotesAdvanced(q, { ...filters, folderId })
+    if (requestId === searchRequestRef.current) setSearchResults(results)
+  }
+
+  const handleSearch = (q: string, filters = searchFilters, delay = 160) => {
     setSearchQuery(q)
     if (q.trim().length >= 2) {
-      const folderId = typeof selectedFolderId === 'string' && !selectedFolderId.startsWith('smart:') && selectedFolderId !== 'trash' && selectedFolderId !== 'pinned'
-        ? selectedFolderId
-        : null
-      const results = await searchNotesAdvanced(q, { ...filters, folderId })
-      setSearchResults(results)
+      const requestId = ++searchRequestRef.current
+      if (searchTimerRef.current !== null) clearTimeout(searchTimerRef.current)
+      searchTimerRef.current = setTimeout(() => {
+        void runSearch(q, filters, requestId)
+      }, delay)
     } else {
+      searchRequestRef.current += 1
+      if (searchTimerRef.current !== null) clearTimeout(searchTimerRef.current)
       setSearchResults(null)
       onSearchCleared()
     }
+  }
+
+  const handleScroll = (event: UIEvent<HTMLDivElement>) => {
+    pendingScrollTopRef.current = event.currentTarget.scrollTop
+    if (scrollRafRef.current !== null) return
+    scrollRafRef.current = requestAnimationFrame(() => {
+      setScrollTop(pendingScrollTopRef.current)
+      scrollRafRef.current = null
+    })
   }
 
   const handleNewNote = async () => {
@@ -70,10 +98,10 @@ export function NoteList({ collapsed, onToggle, onSearchCleared, onSearchResultO
     }
   }, [displayNotes, isTrash, scrollTop, viewMode])
 
-  const setFilter = async (key: keyof typeof searchFilters, value: boolean | 'today' | 'week' | 'month' | null) => {
+  const setFilter = (key: keyof typeof searchFilters, value: boolean | 'today' | 'week' | 'month' | null) => {
     const next = { ...searchFilters, [key]: value }
     setSearchFilters(next)
-    if (searchQuery.trim().length >= 2) await handleSearch(searchQuery, next)
+    if (searchQuery.trim().length >= 2) handleSearch(searchQuery, next, 0)
   }
 
   const exportNotePdf = async (note: Note) => {
@@ -172,7 +200,7 @@ export function NoteList({ collapsed, onToggle, onSearchCleared, onSearchResultO
       <div
         ref={listBodyRef}
         className={`note-list-body ${viewMode === 'grid' ? 'grid-view' : ''}`}
-        onScroll={event => setScrollTop(event.currentTarget.scrollTop)}
+        onScroll={handleScroll}
       >
         {isTrash && deletedFolders.length > 0 && (
           <div className="deleted-folder-list">
