@@ -1,533 +1,413 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import { Node, mergeAttributes } from '@tiptap/core'
 import { NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
 import {
-  ArrowRight, Eraser, Highlighter, Image, MousePointer2, PenLine, Smile, Type,
+  Circle,
+  Eraser,
+  Highlighter,
+  MousePointer2,
+  PenLine,
+  Pencil,
+  RotateCcw,
+  RotateCw,
+  Trash2,
 } from 'lucide-react'
 
-type ArrowKind =
-  | 'right'
-  | 'left'
-  | 'up'
-  | 'down'
-  | 'upRight'
-  | 'upLeft'
-  | 'downRight'
-  | 'downLeft'
-  | 'doubleHorizontal'
-  | 'doubleVertical'
-  | 'longRight'
-  | 'longLeft'
-  | 'turnRight'
-  | 'turnLeft'
-  | 'heavyRight'
-  | 'heavyLeft'
-
-type CanvasItem =
-  | { id: string; type: 'text'; x: number; y: number; text: string }
-  | { id: string; type: 'sticker'; x: number; y: number; text: string }
-  | { id: string; type: 'arrow'; x: number; y: number; arrow: ArrowKind; length?: number; angle?: number }
-  | { id: string; type: 'image'; x: number; y: number; src: string; width: number }
-
-type Stroke = { id: string; color: string; width: number; points: [number, number][] }
-type Tool = 'select' | 'pen' | 'highlight' | 'erase' | 'placeArrow' | 'placeSticker'
-type ResizeEdge = 'bottom' | 'right' | 'corner'
-type ArrowDraft = { id: string; x: number; y: number; length: number; angle: number } | null
-
-const STICKERS = [
-  '\u2B50', '\u2705', '\u{1F525}', '\u{1F4A1}', '\u{1F4CC}', '\u2764\uFE0F', '\u26A0\uFE0F', '\u2753',
-  '\u{1F3AF}', '\u{1F680}', '\u{1F4DA}', '\u{1F9E0}', '\u2728', '\u{1F4DD}', '\u{1F512}', '\u{1F4CE}',
-  '\u{1F600}', '\u{1F642}', '\u{1F60E}', '\u{1F914}', '\u{1F44D}', '\u{1F44E}', '\u{1F64C}', '\u{1F44F}',
-  '\u{1F3C6}', '\u{1F4B0}', '\u{1F4C5}', '\u{1F4C8}', '\u{1F9E9}', '\u{1F3A8}', '\u{1F50D}', '\u{1F514}',
-]
-
-const ARROWS: Array<{ key: ArrowKind; symbol: string; label: string }> = [
-  { key: 'right', symbol: '\u2192', label: 'Right' },
-  { key: 'left', symbol: '\u2190', label: 'Left' },
-  { key: 'up', symbol: '\u2191', label: 'Up' },
-  { key: 'down', symbol: '\u2193', label: 'Down' },
-  { key: 'upRight', symbol: '\u2197', label: 'Up right' },
-  { key: 'upLeft', symbol: '\u2196', label: 'Up left' },
-  { key: 'downRight', symbol: '\u2198', label: 'Down right' },
-  { key: 'downLeft', symbol: '\u2199', label: 'Down left' },
-  { key: 'doubleHorizontal', symbol: '\u2194', label: 'Left and right' },
-  { key: 'doubleVertical', symbol: '\u2195', label: 'Up and down' },
-  { key: 'longRight', symbol: '\u27F6', label: 'Long right' },
-  { key: 'longLeft', symbol: '\u27F5', label: 'Long left' },
-  { key: 'turnRight', symbol: '\u21B1', label: 'Turn right' },
-  { key: 'turnLeft', symbol: '\u21B0', label: 'Turn left' },
-  { key: 'heavyRight', symbol: '\u27A4', label: 'Heavy right' },
-  { key: 'heavyLeft', symbol: '\u2B05', label: 'Heavy left' },
-]
-
-function parseItems(value: unknown): CanvasItem[] {
-  if (Array.isArray(value)) return value as CanvasItem[]
-  if (typeof value !== 'string') return []
-  try { return JSON.parse(value) as CanvasItem[] } catch { return [] }
+type SketchTool = 'select' | 'pen' | 'pencil' | 'marker' | 'eraser'
+type Stroke = {
+  id: string
+  color: string
+  width: number
+  opacity?: number
+  points: [number, number][]
 }
+
+const COLORS = ['#f5f5f7', '#ffd60a', '#ff453a', '#32d74b', '#64d2ff', '#0a84ff', '#bf5af2', '#ff9f0a']
+const DEFAULT_HEIGHT = 420
+const MIN_HEIGHT = 260
+const MAX_HEIGHT = 8000
 
 function parseStrokes(value: unknown): Stroke[] {
-  if (Array.isArray(value)) return value as Stroke[]
+  if (Array.isArray(value)) return normalizeStrokes(value as Stroke[])
   if (typeof value !== 'string') return []
-  try { return JSON.parse(value) as Stroke[] } catch { return [] }
+  try { return normalizeStrokes(JSON.parse(value) as Stroke[]) } catch { return [] }
 }
 
-function getArrowAngle(kind: ArrowKind): number {
-  const angles: Record<ArrowKind, number> = {
-    right: 0,
-    left: 180,
-    up: -90,
-    down: 90,
-    upRight: -45,
-    upLeft: -135,
-    downRight: 45,
-    downLeft: 135,
-    doubleHorizontal: 0,
-    doubleVertical: 90,
-    longRight: 0,
-    longLeft: 180,
-    turnRight: 0,
-    turnLeft: 180,
-    heavyRight: 0,
-    heavyLeft: 180,
-  }
-  return angles[kind] ?? 0
+function normalizeStrokes(strokes: Stroke[]): Stroke[] {
+  return strokes
+    .filter(stroke => Array.isArray(stroke.points) && stroke.points.length > 0)
+    .map(stroke => ({
+      id: stroke.id || crypto.randomUUID(),
+      color: stroke.color || '#f5f5f7',
+      width: Number(stroke.width || 3),
+      opacity: typeof stroke.opacity === 'number' ? stroke.opacity : 1,
+      points: stroke.points,
+    }))
 }
 
-function pointerPoint(event: React.PointerEvent<HTMLElement>, surface: HTMLElement): { x: number; y: number } {
+function pointerPoint(event: PointerEvent<HTMLElement>, surface: HTMLElement): [number, number] {
   const rect = surface.getBoundingClientRect()
-  return {
-    x: Math.max(0, Math.round(event.clientX - rect.left)),
-    y: Math.max(0, Math.round(event.clientY - rect.top)),
-  }
+  return [
+    Math.max(0, Math.round(event.clientX - rect.left)),
+    Math.max(0, Math.round(event.clientY - rect.top)),
+  ]
 }
 
-function FreeCanvasView({ node, selected, updateAttributes, editor }: NodeViewProps) {
-  const parsedItems = parseItems(node.attrs.items)
-  const parsedStrokes = parseStrokes(node.attrs.strokes)
-  const attrHeight = Number(node.attrs.height || 420)
-  const attrWidth = Number(node.attrs.width || 0)
-  const [canvasItems, setCanvasItems] = useState<CanvasItem[]>(parsedItems)
-  const [canvasStrokes, setCanvasStrokes] = useState<Stroke[]>(parsedStrokes)
-  const [canvasSize, setCanvasSize] = useState({ width: attrWidth, height: attrHeight })
-  const [tool, setTool] = useState<Tool>('select')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [dragId, setDragId] = useState<string | null>(null)
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0, itemX: 0, itemY: 0 })
-  const [arrowPickerOpen, setArrowPickerOpen] = useState(false)
-  const [stickerPickerOpen, setStickerPickerOpen] = useState(false)
-  const [activeArrow, setActiveArrow] = useState<ArrowKind>('right')
-  const [activeSticker, setActiveSticker] = useState(STICKERS[0])
-  const [arrowDraft, setArrowDraft] = useState<ArrowDraft>(null)
-  const arrowDraftRef = useRef<ArrowDraft>(null)
+function distanceToSegment(point: [number, number], a: [number, number], b: [number, number]) {
+  const [px, py] = point
+  const [ax, ay] = a
+  const [bx, by] = b
+  const dx = bx - ax
+  const dy = by - ay
+  if (dx === 0 && dy === 0) return Math.hypot(px - ax, py - ay)
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)))
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy))
+}
+
+function strokeHitTest(stroke: Stroke, point: [number, number], radius = 12) {
+  if (stroke.points.length === 1) return Math.hypot(stroke.points[0][0] - point[0], stroke.points[0][1] - point[1]) < radius
+  for (let i = 1; i < stroke.points.length; i += 1) {
+    if (distanceToSegment(point, stroke.points[i - 1], stroke.points[i]) <= Math.max(radius, stroke.width / 2 + 6)) return true
+  }
+  return false
+}
+
+function pointInPolygon(point: [number, number], polygon: [number, number][]) {
+  let inside = false
+  const [x, y] = point
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i, i += 1) {
+    const [xi, yi] = polygon[i]
+    const [xj, yj] = polygon[j]
+    const intersects = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi || 1) + xi
+    if (intersects) inside = !inside
+  }
+  return inside
+}
+
+function getStrokePreset(tool: SketchTool, color: string, size: number): Pick<Stroke, 'color' | 'width' | 'opacity'> {
+  if (tool === 'marker') return { color, width: Math.max(10, size * 4), opacity: 0.38 }
+  if (tool === 'pencil') return { color, width: Math.max(1, size - 1), opacity: 0.7 }
+  return { color, width: size, opacity: 1 }
+}
+
+function translateStroke(stroke: Stroke, dx: number, dy: number): Stroke {
+  return { ...stroke, points: stroke.points.map(([x, y]) => [Math.max(0, x + dx), Math.max(0, y + dy)]) }
+}
+
+function FreeCanvasView({ node, selected, updateAttributes, editor, deleteNode, getPos }: NodeViewProps) {
+  const parsedStrokes = useMemo(() => parseStrokes(node.attrs.strokes), [node.attrs.strokes])
+  const attrHeight = Number(node.attrs.height || DEFAULT_HEIGHT)
+  const [strokes, setStrokes] = useState<Stroke[]>(parsedStrokes)
+  const [height, setHeight] = useState(attrHeight)
+  const [tool, setTool] = useState<SketchTool>('pen')
+  const [color, setColor] = useState(COLORS[0])
+  const [size, setSize] = useState(3)
+  const [selectedStrokeIds, setSelectedStrokeIds] = useState<string[]>([])
+  const [lassoPoints, setLassoPoints] = useState<[number, number][]>([])
+  const strokesRef = useRef(strokes)
+  const heightRef = useRef(height)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const surfaceRef = useRef<HTMLDivElement | null>(null)
-  const itemsRef = useRef<CanvasItem[]>(parsedItems)
-  const strokesRef = useRef<Stroke[]>(parsedStrokes)
-  const drawing = useRef<Stroke | null>(null)
-  const arrowStart = useRef<{ id: string; x: number; y: number } | null>(null)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const resizeEdge = useRef<ResizeEdge | null>(null)
-  const resizeStart = useRef({ x: 0, y: 0, width: attrWidth, height: attrHeight })
-  const sizeRef = useRef({ width: attrWidth, height: attrHeight })
+  const activeStroke = useRef<Stroke | null>(null)
+  const isErasing = useRef(false)
+  const isLassoing = useRef(false)
+  const moveStart = useRef<{ point: [number, number]; strokes: Stroke[]; selectedIds: string[] } | null>(null)
+  const resizeStart = useRef<{ y: number; height: number } | null>(null)
+  const lassoRef = useRef<[number, number][]>([])
+  const historyStart = useRef<Stroke[] | null>(null)
+  const undoStack = useRef<Stroke[][]>([])
+  const redoStack = useRef<Stroke[][]>([])
 
   useEffect(() => {
-    const next = parseItems(node.attrs.items)
-    itemsRef.current = next
-    setCanvasItems(next)
-  }, [node.attrs.items])
+    strokesRef.current = parsedStrokes
+    setStrokes(parsedStrokes)
+  }, [parsedStrokes])
 
   useEffect(() => {
-    const next = parseStrokes(node.attrs.strokes)
-    strokesRef.current = next
-    setCanvasStrokes(next)
-  }, [node.attrs.strokes])
-
-  useEffect(() => {
-    const next = { width: attrWidth, height: attrHeight }
-    sizeRef.current = next
-    setCanvasSize(next)
-  }, [attrWidth, attrHeight])
-
-  const stageItems = (next: CanvasItem[]) => {
-    itemsRef.current = next
-    setCanvasItems(next)
-  }
-
-  const commitItems = (next = itemsRef.current) => {
-    stageItems(next)
-    updateAttributes({ items: JSON.stringify(next) })
-  }
+    heightRef.current = attrHeight
+    setHeight(attrHeight)
+  }, [attrHeight])
 
   const stageStrokes = (next: Stroke[]) => {
     strokesRef.current = next
-    setCanvasStrokes(next)
+    setStrokes(next)
   }
 
-  const commitStrokes = (next = strokesRef.current) => {
+  const stageHeight = (next: number) => {
+    const clamped = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, Math.round(next)))
+    heightRef.current = clamped
+    setHeight(clamped)
+  }
+
+  const commit = (nextStrokes = strokesRef.current, nextHeight = heightRef.current) => {
+    if (historyStart.current) {
+      undoStack.current = [...undoStack.current.slice(-39), historyStart.current]
+      redoStack.current = []
+      historyStart.current = null
+    }
+    updateAttributes({ strokes: JSON.stringify(nextStrokes), height: nextHeight })
+  }
+
+  const startHistory = () => {
+    if (!historyStart.current) historyStart.current = strokesRef.current
+  }
+
+  const selectBlock = () => {
+    wrapperRef.current?.focus()
+    if (typeof getPos === 'function') {
+      try { editor.chain().focus().setNodeSelection(getPos()).run() } catch { editor.commands.focus() }
+    }
+  }
+
+  const deleteSelectedStrokes = () => {
+    if (selectedStrokeIds.length === 0) return false
+    startHistory()
+    const selected = new Set(selectedStrokeIds)
+    const next = strokesRef.current.filter(stroke => !selected.has(stroke.id))
+    setSelectedStrokeIds([])
     stageStrokes(next)
-    updateAttributes({ strokes: JSON.stringify(next) })
-  }
-
-  const stageCanvasSize = (next: { width: number; height: number }) => {
-    sizeRef.current = next
-    setCanvasSize(next)
-  }
-
-  const commitCanvasSize = () => {
-    updateAttributes(sizeRef.current)
-  }
-
-  const addItem = (item: Omit<CanvasItem, 'id'>) => {
-    const id = crypto.randomUUID()
-    commitItems([...itemsRef.current, { ...item, id } as CanvasItem])
-    setSelectedId(id)
-  }
-
-  const setCurrentArrowDraft = (draft: ArrowDraft) => {
-    arrowDraftRef.current = draft
-    setArrowDraft(draft)
-  }
-
-  const deleteSelected = () => {
-    if (!selectedId) return
-    commitItems(itemsRef.current.filter(item => item.id !== selectedId))
-    setSelectedId(null)
+    commit(next)
+    return true
   }
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!wrapperRef.current?.contains(document.activeElement)) return
-      const target = event.target as HTMLElement | null
-      if (target?.tagName === 'TEXTAREA' || target?.tagName === 'INPUT') return
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
         event.preventDefault()
-        if (event.shiftKey) editor.commands.redo()
-        else editor.commands.undo()
+        const previous = undoStack.current.pop()
+        if (!previous) return
+        redoStack.current.push(strokesRef.current)
+        stageStrokes(previous)
+        updateAttributes({ strokes: JSON.stringify(previous), height: heightRef.current })
         return
       }
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+      if ((event.ctrlKey || event.metaKey) && (event.key.toLowerCase() === 'y' || (event.shiftKey && event.key.toLowerCase() === 'z'))) {
         event.preventDefault()
-        editor.commands.redo()
+        const next = redoStack.current.pop()
+        if (!next) return
+        undoStack.current.push(strokesRef.current)
+        stageStrokes(next)
+        updateAttributes({ strokes: JSON.stringify(next), height: heightRef.current })
         return
       }
-      if (!selectedId) return
       if (event.key !== 'Delete' && event.key !== 'Backspace') return
       event.preventDefault()
-      deleteSelected()
+      if (!deleteSelectedStrokes()) deleteNode()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [selectedId, editor])
+  }, [deleteNode, selectedStrokeIds, updateAttributes])
 
-  const placeAtPointer = (event: React.PointerEvent<HTMLDivElement>) => {
-    const { x, y } = pointerPoint(event, event.currentTarget)
-    if (tool === 'placeSticker') {
-      addItem({ type: 'sticker', x, y, text: activeSticker })
-      setTool('select')
-      return true
-    }
-    return false
+  const autoGrow = (point: [number, number]) => {
+    if (point[1] < heightRef.current - 56) return
+    stageHeight(point[1] + 180)
   }
 
-  const startDraw = (event: React.PointerEvent<HTMLDivElement>) => {
-    wrapperRef.current?.focus()
-    setSelectedId(null)
-    if (tool === 'placeArrow') {
-      const point = pointerPoint(event, event.currentTarget)
-      const id = crypto.randomUUID()
-      arrowStart.current = { id, ...point }
-      setCurrentArrowDraft({ id, x: point.x, y: point.y, length: 86, angle: getArrowAngle(activeArrow) })
+  const eraseAt = (point: [number, number]) => {
+    const next = strokesRef.current.filter(stroke => !strokeHitTest(stroke, point, 10))
+    if (next.length !== strokesRef.current.length) stageStrokes(next)
+  }
+
+  const startSketch = (event: PointerEvent<HTMLDivElement>) => {
+    selectBlock()
+    const point = pointerPoint(event, event.currentTarget)
+    if (tool === 'select') {
+      const hit = [...strokesRef.current].reverse().find(stroke => strokeHitTest(stroke, point))
+      if (hit) {
+        const ids = selectedStrokeIds.includes(hit.id) ? selectedStrokeIds : [hit.id]
+        setSelectedStrokeIds(ids)
+        moveStart.current = { point, strokes: strokesRef.current, selectedIds: ids }
+        startHistory()
+      } else {
+        setSelectedStrokeIds([])
+        isLassoing.current = true
+        lassoRef.current = [point]
+        setLassoPoints(lassoRef.current)
+      }
       event.currentTarget.setPointerCapture(event.pointerId)
       return
     }
-    if (placeAtPointer(event)) return
-    if (tool === 'select') return
-    const rect = event.currentTarget.getBoundingClientRect()
-    const point: [number, number] = [event.clientX - rect.left, event.clientY - rect.top]
-    if (tool === 'erase') {
-      commitStrokes(strokesRef.current.filter(stroke => !stroke.points.some(([x, y]) => Math.hypot(x - point[0], y - point[1]) < 18)))
+    setSelectedStrokeIds([])
+    startHistory()
+    if (tool === 'eraser') {
+      isErasing.current = true
+      eraseAt(point)
+      event.currentTarget.setPointerCapture(event.pointerId)
       return
     }
-    drawing.current = {
-      id: crypto.randomUUID(),
-      color: tool === 'highlight' ? 'rgba(255,214,10,0.42)' : '#f5f5f7',
-      width: tool === 'highlight' ? 16 : 3,
-      points: [point],
-    }
+    const preset = getStrokePreset(tool, color, size)
+    activeStroke.current = { id: crypto.randomUUID(), ...preset, points: [point] }
+    stageStrokes([...strokesRef.current, activeStroke.current])
+    autoGrow(point)
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
-  const continueDraw = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (arrowStart.current) {
-      const start = arrowStart.current
-      const point = pointerPoint(event, event.currentTarget)
-      const dx = point.x - start.x
-      const dy = point.y - start.y
-      const length = Math.max(24, Math.round(Math.hypot(dx, dy)))
-      const angle = Math.round(Math.atan2(dy, dx) * 180 / Math.PI)
-      setCurrentArrowDraft({ id: start.id, x: start.x, y: start.y, length, angle })
+  const continueSketch = (event: PointerEvent<HTMLDivElement>) => {
+    const point = pointerPoint(event, event.currentTarget)
+    if (resizeStart.current) return
+    if (moveStart.current) {
+      const selected = new Set(moveStart.current.selectedIds)
+      const dx = point[0] - moveStart.current.point[0]
+      const dy = point[1] - moveStart.current.point[1]
+      stageStrokes(moveStart.current.strokes.map(stroke => selected.has(stroke.id) ? translateStroke(stroke, dx, dy) : stroke))
+      autoGrow(point)
       return
     }
-    if (!drawing.current) return
-    const rect = event.currentTarget.getBoundingClientRect()
-    drawing.current = {
-      ...drawing.current,
-      points: [...drawing.current.points, [event.clientX - rect.left, event.clientY - rect.top]],
+    if (isLassoing.current) {
+      lassoRef.current = [...lassoRef.current, point]
+      setLassoPoints(lassoRef.current)
+      return
     }
-    stageStrokes([...strokesRef.current.filter(stroke => stroke.id !== drawing.current!.id), drawing.current])
+    if (isErasing.current) {
+      eraseAt(point)
+      return
+    }
+    if (!activeStroke.current) return
+    const last = activeStroke.current.points.at(-1)
+    if (last && Math.hypot(last[0] - point[0], last[1] - point[1]) < 2) return
+    activeStroke.current = { ...activeStroke.current, points: [...activeStroke.current.points, point] }
+    stageStrokes([...strokesRef.current.filter(stroke => stroke.id !== activeStroke.current?.id), activeStroke.current])
+    autoGrow(point)
   }
 
-  const beginResize = (event: React.PointerEvent<HTMLButtonElement>, edge: ResizeEdge) => {
+  const finishSketch = (event: PointerEvent<HTMLDivElement>) => {
+    if (isLassoing.current) {
+      const selectedIds = strokesRef.current
+        .filter(stroke => stroke.points.some(point => pointInPolygon(point, lassoRef.current)))
+        .map(stroke => stroke.id)
+      setSelectedStrokeIds(selectedIds)
+      lassoRef.current = []
+      setLassoPoints([])
+    }
+    if (activeStroke.current || isErasing.current || moveStart.current) commit()
+    activeStroke.current = null
+    isErasing.current = false
+    isLassoing.current = false
+    moveStart.current = null
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+  }
+
+  const undo = () => {
+    const previous = undoStack.current.pop()
+    if (!previous) return
+    redoStack.current.push(strokesRef.current)
+    stageStrokes(previous)
+    updateAttributes({ strokes: JSON.stringify(previous), height: heightRef.current })
+  }
+
+  const redo = () => {
+    const next = redoStack.current.pop()
+    if (!next) return
+    undoStack.current.push(strokesRef.current)
+    stageStrokes(next)
+    updateAttributes({ strokes: JSON.stringify(next), height: heightRef.current })
+  }
+
+  const clearSketch = () => {
+    if (strokesRef.current.length === 0) return
+    startHistory()
+    setSelectedStrokeIds([])
+    stageStrokes([])
+    commit([])
+  }
+
+  const beginResize = (event: PointerEvent<HTMLButtonElement>) => {
     event.preventDefault()
     event.stopPropagation()
-    resizeEdge.current = edge
-    resizeStart.current = {
-      x: event.clientX,
-      y: event.clientY,
-      width: event.currentTarget.closest('.free-canvas-block')?.getBoundingClientRect().width ?? sizeRef.current.width,
-      height: sizeRef.current.height,
-    }
+    selectBlock()
+    resizeStart.current = { y: event.clientY, height: heightRef.current }
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
-  const resizeCanvas = (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (!resizeEdge.current) return
-    const next = { ...sizeRef.current }
-    if (resizeEdge.current === 'bottom' || resizeEdge.current === 'corner') {
-      next.height = Math.max(260, Math.min(1200, Math.round(resizeStart.current.height + event.clientY - resizeStart.current.y)))
-    }
-    if (resizeEdge.current === 'right' || resizeEdge.current === 'corner') {
-      next.width = Math.max(420, Math.min(1600, Math.round(resizeStart.current.width + event.clientX - resizeStart.current.x)))
-    }
-    stageCanvasSize(next)
+  const resize = (event: PointerEvent<HTMLButtonElement>) => {
+    if (!resizeStart.current) return
+    stageHeight(resizeStart.current.height + event.clientY - resizeStart.current.y)
   }
 
-  const endResize = (event: React.PointerEvent<HTMLButtonElement>) => {
-    resizeEdge.current = null
-    commitCanvasSize()
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
-    }
+  const endResize = (event: PointerEvent<HTMLButtonElement>) => {
+    if (!resizeStart.current) return
+    resizeStart.current = null
+    updateAttributes({ height: heightRef.current, strokes: JSON.stringify(strokesRef.current) })
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
   }
 
-  const finishArrowDraft = () => {
-    const draft = arrowDraftRef.current
-    if (!draft) return
-    commitItems([...itemsRef.current, {
-      id: draft.id,
-      type: 'arrow',
-      x: draft.x,
-      y: draft.y,
-      arrow: activeArrow,
-      length: draft.length,
-      angle: draft.angle,
-    }])
-    setSelectedId(draft.id)
-    setCurrentArrowDraft(null)
-    arrowStart.current = null
-    setTool('select')
-  }
-
-  const renderArrowLine = (item: Extract<CanvasItem, { type: 'arrow' }>) => {
-    const length = Math.max(24, item.length ?? 86)
-    const angle = item.angle ?? getArrowAngle(item.arrow)
-    return (
-      <svg
-        className="canvas-arrow-svg"
-        width={length + 18}
-        height="28"
-        viewBox={`0 0 ${length + 18} 28`}
-        style={{ transform: `translateY(-14px) rotate(${angle}deg)`, transformOrigin: '9px 14px' }}
-      >
-        <line x1="9" y1="14" x2={length} y2="14" />
-        <polyline points={`${length - 10},5 ${length + 2},14 ${length - 10},23`} />
-      </svg>
-    )
-  }
+  const selectedSet = new Set(selectedStrokeIds)
 
   return (
     <NodeViewWrapper
       ref={wrapperRef}
-      className={`free-canvas-block ${selected ? 'is-selected' : ''}`}
-      style={canvasSize.width ? { width: canvasSize.width } : undefined}
+      className={`free-canvas-block sketch-block ${selected ? 'is-selected' : ''}`}
       contentEditable={false}
       tabIndex={0}
+      onClick={selectBlock}
     >
-      <div className="free-canvas-toolbar">
-        <button className={tool === 'select' ? 'active' : ''} onClick={() => setTool('select')} title="Select"><MousePointer2 size={13} /></button>
+      <div className="free-canvas-toolbar sketch-toolbar">
+        <button className={tool === 'select' ? 'active' : ''} onClick={() => setTool('select')} title="Select strokes"><MousePointer2 size={13} /></button>
         <button className={tool === 'pen' ? 'active' : ''} onClick={() => setTool('pen')} title="Pen"><PenLine size={13} /></button>
-        <button className={tool === 'highlight' ? 'active' : ''} onClick={() => setTool('highlight')} title="Highlighter"><Highlighter size={13} /></button>
-        <button className={tool === 'erase' ? 'active' : ''} onClick={() => setTool('erase')} title="Eraser"><Eraser size={13} /></button>
+        <button className={tool === 'pencil' ? 'active' : ''} onClick={() => setTool('pencil')} title="Pencil"><Pencil size={13} /></button>
+        <button className={tool === 'marker' ? 'active' : ''} onClick={() => setTool('marker')} title="Marker"><Highlighter size={13} /></button>
+        <button className={tool === 'eraser' ? 'active' : ''} onClick={() => setTool('eraser')} title="Eraser"><Eraser size={13} /></button>
+        <div className="sketch-color-row">
+          {COLORS.map(swatch => (
+            <button
+              key={swatch}
+              className={`sketch-color ${color === swatch ? 'active' : ''}`}
+              style={{ background: swatch }}
+              onClick={() => setColor(swatch)}
+              title={swatch}
+            />
+          ))}
+        </div>
+        <label className="sketch-size-control" title="Stroke size">
+          <Circle size={10} />
+          <input type="range" min="1" max="9" value={size} onChange={event => setSize(Number(event.target.value))} />
+        </label>
         <span />
-        <button onClick={() => addItem({ type: 'text', x: 40, y: 44, text: 'Text box' })} title="Add text"><Type size={13} /></button>
-        <div className="canvas-picker-anchor">
-          <button
-            className={tool === 'placeSticker' ? 'active' : ''}
-            onClick={() => setTool('placeSticker')}
-            onDoubleClick={() => setStickerPickerOpen(value => !value)}
-            title="Emoji: click to place, double-click to choose"
-          >
-            <Smile size={13} />
-          </button>
-          {stickerPickerOpen && (
-            <div className="canvas-picker-popover">
-              {STICKERS.map(sticker => (
-                <button key={sticker} className={activeSticker === sticker ? 'active' : ''} onClick={() => { setActiveSticker(sticker); setStickerPickerOpen(false); setTool('placeSticker') }}>
-                  {sticker}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="canvas-picker-anchor">
-          <button
-            className={tool === 'placeArrow' ? 'active' : ''}
-            onClick={() => setTool('placeArrow')}
-            onDoubleClick={() => setArrowPickerOpen(value => !value)}
-            title="Arrow: click to place, double-click to choose"
-          >
-            <ArrowRight size={13} />
-          </button>
-          {arrowPickerOpen && (
-            <div className="canvas-picker-popover arrow-picker">
-              {ARROWS.map(({ key, symbol, label }) => (
-                <button key={key} className={activeArrow === key ? 'active' : ''} onClick={() => { setActiveArrow(key); setArrowPickerOpen(false); setTool('placeArrow') }} title={label}>
-                  {symbol}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <button onClick={() => fileInputRef.current?.click()} title="Add image"><Image size={13} /></button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          hidden
-          onChange={event => {
-            const file = event.target.files?.[0]
-            if (!file) return
-            const reader = new FileReader()
-            reader.onload = () => addItem({ type: 'image', x: 60, y: 60, src: reader.result as string, width: 240 })
-            reader.readAsDataURL(file)
-            event.target.value = ''
-          }}
-        />
+        <button onClick={undo} title="Undo sketch stroke"><RotateCcw size={13} /></button>
+        <button onClick={redo} title="Redo sketch stroke"><RotateCw size={13} /></button>
+        <button onClick={clearSketch} title="Clear sketch"><Trash2 size={13} /></button>
       </div>
       <div
-        className={`free-canvas-surface tool-${tool}`}
-        style={{ height: canvasSize.height }}
         ref={surfaceRef}
-        onPointerDown={startDraw}
-        onPointerMove={continueDraw}
-        onPointerUp={() => {
-          if (arrowStart.current) finishArrowDraft()
-          if (drawing.current) commitStrokes()
-          drawing.current = null
-        }}
+        className={`free-canvas-surface sketch-surface tool-${tool}`}
+        style={{ height }}
+        onPointerDown={startSketch}
+        onPointerMove={continueSketch}
+        onPointerUp={finishSketch}
+        onPointerCancel={finishSketch}
       >
-        <svg className="free-canvas-drawing" width="100%" height="100%">
-          {canvasStrokes.map(stroke => (
+        <svg className="free-canvas-drawing sketch-drawing" width="100%" height="100%">
+          {strokes.map(stroke => (
             <polyline
               key={stroke.id}
+              className={selectedSet.has(stroke.id) ? 'is-selected-stroke' : ''}
               points={stroke.points.map(point => point.join(',')).join(' ')}
               fill="none"
               stroke={stroke.color}
+              strokeOpacity={stroke.opacity ?? 1}
               strokeWidth={stroke.width}
               strokeLinecap="round"
               strokeLinejoin="round"
             />
           ))}
+          {lassoPoints.length > 1 && (
+            <polyline
+              className="sketch-lasso"
+              points={lassoPoints.map(point => point.join(',')).join(' ')}
+              fill="none"
+            />
+          )}
         </svg>
-        {arrowDraft && (
-          <div className="canvas-item canvas-item-arrow canvas-arrow-draft" style={{ left: arrowDraft.x, top: arrowDraft.y }}>
-            {renderArrowLine({ id: arrowDraft.id, type: 'arrow', x: arrowDraft.x, y: arrowDraft.y, arrow: activeArrow, length: arrowDraft.length, angle: arrowDraft.angle })}
-          </div>
-        )}
-        {canvasItems.map(item => (
-          <div
-            key={item.id}
-            className={`canvas-item canvas-item-${item.type} ${selectedId === item.id ? 'selected' : ''}`}
-            style={{ left: item.x, top: item.y, width: item.type === 'image' ? item.width : undefined }}
-            onPointerDown={event => {
-              if (tool !== 'select') return
-              event.stopPropagation()
-              wrapperRef.current?.focus()
-              setSelectedId(item.id)
-              setDragId(item.id)
-              setDragStart({ x: event.clientX, y: event.clientY, itemX: item.x, itemY: item.y })
-              event.currentTarget.setPointerCapture(event.pointerId)
-            }}
-            onPointerMove={event => {
-              if (dragId !== item.id) return
-              stageItems(itemsRef.current.map(candidate => candidate.id === item.id
-                ? { ...candidate, x: Math.max(0, dragStart.itemX + event.clientX - dragStart.x), y: Math.max(0, dragStart.itemY + event.clientY - dragStart.y) } as CanvasItem
-                : candidate))
-            }}
-            onPointerUp={() => {
-              if (dragId === item.id) commitItems()
-              setDragId(null)
-            }}
-            onDoubleClick={event => {
-              event.stopPropagation()
-              if (item.type === 'text') return
-              commitItems(itemsRef.current.filter(candidate => candidate.id !== item.id))
-            }}
-          >
-            {item.type === 'text' && (
-              <textarea
-                value={item.text}
-                onChange={event => commitItems(itemsRef.current.map(candidate => candidate.id === item.id ? { ...item, text: event.target.value } : candidate))}
-              />
-            )}
-            {item.type === 'sticker' && <span>{item.text}</span>}
-            {item.type === 'arrow' && (
-              <>
-                {renderArrowLine(item)}
-                {selectedId === item.id && (
-                  <button
-                    className="canvas-arrow-resize"
-                    style={{
-                      transform: `translate(${Math.cos(((item.angle ?? getArrowAngle(item.arrow)) * Math.PI) / 180) * (item.length ?? 86)}px, ${Math.sin(((item.angle ?? getArrowAngle(item.arrow)) * Math.PI) / 180) * (item.length ?? 86)}px)`,
-                    }}
-                    onPointerDown={event => {
-                      event.stopPropagation()
-                      const surface = surfaceRef.current
-                      if (!surface) return
-                      const origin = { x: item.x, y: item.y }
-                      event.currentTarget.setPointerCapture(event.pointerId)
-                      const move = (moveEvent: PointerEvent) => {
-                        const rect = surface.getBoundingClientRect()
-                        const x = Math.max(0, Math.round(moveEvent.clientX - rect.left))
-                        const y = Math.max(0, Math.round(moveEvent.clientY - rect.top))
-                        const dx = x - origin.x
-                        const dy = y - origin.y
-                        const length = Math.max(24, Math.round(Math.hypot(dx, dy)))
-                        const angle = Math.round(Math.atan2(dy, dx) * 180 / Math.PI)
-                        stageItems(itemsRef.current.map(candidate => candidate.id === item.id ? { ...candidate, length, angle } as CanvasItem : candidate))
-                      }
-                      const up = () => {
-                        commitItems()
-                        window.removeEventListener('pointermove', move)
-                        window.removeEventListener('pointerup', up)
-                      }
-                      window.addEventListener('pointermove', move)
-                      window.addEventListener('pointerup', up)
-                    }}
-                    title="Drag to resize and rotate"
-                  />
-                )}
-              </>
-            )}
-            {item.type === 'image' && <img src={item.src} alt="" draggable={false} />}
-          </div>
-        ))}
       </div>
-      <button className="canvas-resize-handle canvas-resize-bottom" onPointerDown={event => beginResize(event, 'bottom')} onPointerMove={resizeCanvas} onPointerUp={endResize} title="Drag to make canvas taller" />
-      <button className="canvas-resize-handle canvas-resize-right" onPointerDown={event => beginResize(event, 'right')} onPointerMove={resizeCanvas} onPointerUp={endResize} title="Drag to make canvas wider" />
-      <button className="canvas-resize-handle canvas-resize-corner" onPointerDown={event => beginResize(event, 'corner')} onPointerMove={resizeCanvas} onPointerUp={endResize} title="Drag to resize canvas" />
+      <button
+        className="canvas-resize-handle canvas-resize-bottom sketch-resize-bottom"
+        onPointerDown={beginResize}
+        onPointerMove={resize}
+        onPointerUp={endResize}
+        title="Drag to resize sketch"
+      />
     </NodeViewWrapper>
   )
 }
@@ -536,12 +416,14 @@ export const FreeCanvasBlock = Node.create({
   name: 'freeCanvas',
   group: 'block',
   atom: true,
+  selectable: true,
+  draggable: false,
 
   addAttributes() {
     return {
       items: { default: '[]' },
       strokes: { default: '[]' },
-      height: { default: 420 },
+      height: { default: DEFAULT_HEIGHT },
       width: { default: 0 },
     }
   },

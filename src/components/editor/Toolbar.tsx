@@ -426,7 +426,7 @@ export function Toolbar({ editor, noteId, searchOpen, onToggleSearch }: Props) {
         <button
           className="toolbar-btn"
           onClick={() => editor.chain().focus().insertFreeCanvas().run()}
-          title="Insert canvas / sketch block"
+          title="Insert sketch"
         >
           <PenTool size={14} />
         </button>
