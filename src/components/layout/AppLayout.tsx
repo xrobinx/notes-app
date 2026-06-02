@@ -77,6 +77,14 @@ export function AppLayout() {
     }
   }, [settings.autoLockTimeout, unlockedNoteIds.length, clearUnlockedNotes])
 
+  useEffect(() => {
+    return window.api.on.openNote(async id => {
+      const exists = useNotesStore.getState().notes.some(note => note.id === id)
+      if (!exists) await useNotesStore.getState().loadNotes(null)
+      useNotesStore.getState().selectNote(id)
+    })
+  }, [])
+
   return (
     <div className="app-layout">
       <TitleBar />

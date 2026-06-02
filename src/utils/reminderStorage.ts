@@ -9,7 +9,7 @@ export interface StoredReminder {
   lastNotifiedAt?: string | null
 }
 
-const WIDGET_KEYS = ['notes-widget-all', 'notes-widget-reminder']
+const WIDGET_KEYS = ['notes-widget-reminder', 'notes-widget-today', 'notes-widget-all']
 const REMINDER_CHANNEL = 'notes-reminders-channel'
 let reminderChannel: BroadcastChannel | null = null
 

@@ -19,8 +19,8 @@ const reminderTimers = new Map<string, NodeJS.Timeout>()
 let appIsQuitting = false
 let restoredWidgetsOnLaunch = false
 
-type WidgetType = 'all' | 'note' | 'todo' | 'reminder'
-const widgetTypes: WidgetType[] = ['all', 'note', 'todo', 'reminder']
+type WidgetType = 'today' | 'pinned' | 'quick' | 'checklist' | 'reminder' | 'all' | 'note' | 'todo'
+const widgetTypes: WidgetType[] = ['today', 'pinned', 'quick', 'checklist', 'reminder', 'all', 'note', 'todo']
 
 function levenshteinDistance(a: string, b: string): number {
   const source = a.toLowerCase()
@@ -176,10 +176,14 @@ function openWidget(type: WidgetType): void {
   }
 
   const sizes: Record<WidgetType, { width: number; height: number }> = {
-    all: { width: 320, height: 520 },
-    note: { width: 300, height: 260 },
-    todo: { width: 300, height: 360 },
+    today: { width: 340, height: 500 },
+    pinned: { width: 320, height: 310 },
+    quick: { width: 300, height: 260 },
+    checklist: { width: 310, height: 370 },
     reminder: { width: 320, height: 360 },
+    all: { width: 340, height: 500 },
+    note: { width: 300, height: 260 },
+    todo: { width: 310, height: 370 },
   }
   const size = sizes[type]
   const savedBounds = getSettings().widgetBounds[type]
@@ -259,9 +263,10 @@ function createTray(): void {
     {
       label: 'Desktop Widgets',
       submenu: [
-        { label: 'Combined Widget', click: () => openWidget('all') },
-        { label: 'Typed Note Widget', click: () => openWidget('note') },
-        { label: 'Todo Widget', click: () => openWidget('todo') },
+        { label: 'Today Widget', click: () => openWidget('today') },
+        { label: 'Pinned Note Widget', click: () => openWidget('pinned') },
+        { label: 'Quick Note Widget', click: () => openWidget('quick') },
+        { label: 'Checklist Widget', click: () => openWidget('checklist') },
         { label: 'Reminder Widget', click: () => openWidget('reminder') },
       ]
     },
@@ -304,6 +309,14 @@ ipcMain.on('window:close-current', event => {
 })
 ipcMain.handle('window:is-maximized', () => mainWindow?.isMaximized() ?? false)
 ipcMain.handle('widgets:open', (_event, type: WidgetType) => openWidget(type))
+ipcMain.handle('widgets:open-note', (_event, noteId: string) => {
+  setSetting('lastOpenNoteId', noteId)
+  if (!mainWindow || mainWindow.isDestroyed()) createWindow()
+  mainWindow?.show()
+  mainWindow?.focus()
+  mainWindow?.webContents.send('notes:open-note', noteId)
+  return { ok: true }
+})
 ipcMain.handle('language:refresh-spellchecker', () => configureSpellchecker())
 function showReminderNotification(reminder: { id: string; text: string }): void {
   new Notification({

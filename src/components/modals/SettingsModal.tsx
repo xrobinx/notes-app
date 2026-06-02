@@ -545,14 +545,15 @@ export function SettingsModal({ onClose }: Props) {
           <div className="settings-card-row">
             <div className="settings-card-icon"><StickyNote size={18} /></div>
             <div className="settings-card-copy">
-              <strong>Separate desktop widgets</strong>
-              <span>Open a combined widget, or separate widgets for typed notes, todo, and reminders.</span>
+              <strong>Apple-style desktop widgets</strong>
+              <span>Open glanceable cards for today, pinned notes, quick capture, checklists, and reminders.</span>
             </div>
           </div>
           <div className="settings-format-row">
-            <button disabled={settings.performanceMode} onClick={() => window.api.widgets.open('all')}>Combined</button>
-            <button disabled={settings.performanceMode} onClick={() => window.api.widgets.open('note')}>Typed Note</button>
-            <button disabled={settings.performanceMode} onClick={() => window.api.widgets.open('todo')}>Todo</button>
+            <button disabled={settings.performanceMode} onClick={() => window.api.widgets.open('today')}>Today</button>
+            <button disabled={settings.performanceMode} onClick={() => window.api.widgets.open('pinned')}>Pinned</button>
+            <button disabled={settings.performanceMode} onClick={() => window.api.widgets.open('quick')}>Quick Note</button>
+            <button disabled={settings.performanceMode} onClick={() => window.api.widgets.open('checklist')}>Checklist</button>
             <button disabled={settings.performanceMode} onClick={() => window.api.widgets.open('reminder')}>Reminders</button>
           </div>
           {settings.performanceMode && <div className="settings-sync-note">Widgets are off while Performance mode is enabled.</div>}

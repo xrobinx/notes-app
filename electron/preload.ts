@@ -53,7 +53,8 @@ contextBridge.exposeInMainWorld('api', {
     isMaximized: () => ipcRenderer.invoke('window:is-maximized')
   },
   widgets: {
-    open: (type: 'all' | 'note' | 'todo' | 'reminder') => ipcRenderer.invoke('widgets:open', type),
+    open: (type: 'today' | 'pinned' | 'quick' | 'checklist' | 'reminder' | 'all' | 'note' | 'todo') => ipcRenderer.invoke('widgets:open', type),
+    openNote: (noteId: string) => ipcRenderer.invoke('widgets:open-note', noteId),
     scheduleReminder: (reminder: { id: string; text: string; dueAt: string }) =>
       ipcRenderer.invoke('widgets:schedule-reminder', reminder),
     cancelReminder: (id: string) => ipcRenderer.invoke('widgets:cancel-reminder', id)
@@ -101,6 +102,11 @@ contextBridge.exposeInMainWorld('api', {
       const handler = (_e: Electron.IpcRendererEvent, id: string) => cb(id)
       ipcRenderer.on('widgets:reminder-fired', handler)
       return () => ipcRenderer.removeListener('widgets:reminder-fired', handler)
+    },
+    openNote: (cb: (id: string) => void) => {
+      const handler = (_e: Electron.IpcRendererEvent, id: string) => cb(id)
+      ipcRenderer.on('notes:open-note', handler)
+      return () => ipcRenderer.removeListener('notes:open-note', handler)
     }
   }
 })
