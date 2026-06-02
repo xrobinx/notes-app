@@ -53,7 +53,7 @@ contextBridge.exposeInMainWorld('api', {
     isMaximized: () => ipcRenderer.invoke('window:is-maximized')
   },
   widgets: {
-    open: (type: 'today' | 'pinned' | 'quick' | 'checklist' | 'reminder' | 'all' | 'note' | 'todo') => ipcRenderer.invoke('widgets:open', type),
+    open: (type: 'widget' | 'today' | 'pinned' | 'quick' | 'checklist' | 'reminder' | 'all' | 'note' | 'todo') => ipcRenderer.invoke('widgets:open', type),
     openNote: (noteId: string) => ipcRenderer.invoke('widgets:open-note', noteId),
     scheduleReminder: (reminder: { id: string; text: string; dueAt: string }) =>
       ipcRenderer.invoke('widgets:schedule-reminder', reminder),

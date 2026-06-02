@@ -71,6 +71,6 @@ export interface Settings {
   performanceMode: boolean
   translationLanguage: string
   shortcuts: Record<string, string>
-  openWidgets: ('today' | 'pinned' | 'quick' | 'checklist' | 'reminder' | 'all' | 'note' | 'todo')[]
+  openWidgets: ('widget' | 'today' | 'pinned' | 'quick' | 'checklist' | 'reminder' | 'all' | 'note' | 'todo')[]
   widgetBounds: Record<string, { x?: number; y?: number; width: number; height: number }>
 }

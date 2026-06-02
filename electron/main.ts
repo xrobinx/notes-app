@@ -19,8 +19,8 @@ const reminderTimers = new Map<string, NodeJS.Timeout>()
 let appIsQuitting = false
 let restoredWidgetsOnLaunch = false
 
-type WidgetType = 'today' | 'pinned' | 'quick' | 'checklist' | 'reminder' | 'all' | 'note' | 'todo'
-const widgetTypes: WidgetType[] = ['today', 'pinned', 'quick', 'checklist', 'reminder', 'all', 'note', 'todo']
+type WidgetType = 'widget' | 'today' | 'pinned' | 'quick' | 'checklist' | 'reminder' | 'all' | 'note' | 'todo'
+const widgetTypes: WidgetType[] = ['widget', 'today', 'pinned', 'quick', 'checklist', 'reminder', 'all', 'note', 'todo']
 
 function levenshteinDistance(a: string, b: string): number {
   const source = a.toLowerCase()
@@ -166,8 +166,9 @@ function createWindow(): void {
 function openWidget(type: WidgetType): void {
   if (!widgetTypes.includes(type)) return
   if (getSettings().performanceMode) return
+  const widgetKey: WidgetType = 'widget'
 
-  const existing = widgetWindows.get(type)
+  const existing = widgetWindows.get(widgetKey)
   if (existing && !existing.isDestroyed()) {
     existing.show()
     existing.focus()
@@ -176,6 +177,7 @@ function openWidget(type: WidgetType): void {
   }
 
   const sizes: Record<WidgetType, { width: number; height: number }> = {
+    widget: { width: 360, height: 520 },
     today: { width: 340, height: 500 },
     pinned: { width: 320, height: 310 },
     quick: { width: 300, height: 260 },
@@ -185,8 +187,8 @@ function openWidget(type: WidgetType): void {
     note: { width: 300, height: 260 },
     todo: { width: 310, height: 370 },
   }
-  const size = sizes[type]
-  const savedBounds = getSettings().widgetBounds[type]
+  const size = sizes[widgetKey]
+  const savedBounds = getSettings().widgetBounds[widgetKey]
   const widgetWindow = new BrowserWindow({
     width: savedBounds?.width ?? size.width,
     height: savedBounds?.height ?? size.height,
@@ -207,14 +209,14 @@ function openWidget(type: WidgetType): void {
     }
   })
 
-  widgetWindows.set(type, widgetWindow)
+  widgetWindows.set(widgetKey, widgetWindow)
   persistOpenWidgets()
 
   const saveWidgetBounds = () => {
     const settings = getSettings()
     setSetting('widgetBounds', {
       ...settings.widgetBounds,
-      [type]: widgetWindow.getBounds(),
+      [widgetKey]: widgetWindow.getBounds(),
     })
   }
 
@@ -227,10 +229,10 @@ function openWidget(type: WidgetType): void {
   widgetWindow.on('resized', saveWidgetBounds)
   widgetWindow.on('close', saveWidgetBounds)
   widgetWindow.on('closed', () => {
-    widgetWindows.delete(type)
+    widgetWindows.delete(widgetKey)
     if (!appIsQuitting) persistOpenWidgets()
   })
-  loadRenderer(widgetWindow, type)
+  loadRenderer(widgetWindow, widgetKey)
   configureSpellchecker()
 }
 
@@ -263,11 +265,7 @@ function createTray(): void {
     {
       label: 'Desktop Widgets',
       submenu: [
-        { label: 'Today Widget', click: () => openWidget('today') },
-        { label: 'Pinned Note Widget', click: () => openWidget('pinned') },
-        { label: 'Quick Note Widget', click: () => openWidget('quick') },
-        { label: 'Checklist Widget', click: () => openWidget('checklist') },
-        { label: 'Reminder Widget', click: () => openWidget('reminder') },
+        { label: 'Notes Widget', click: () => openWidget('widget') },
       ]
     },
     { type: 'separator' },
