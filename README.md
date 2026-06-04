@@ -6,6 +6,7 @@ A Windows notes app inspired by Apple Notes, built with Electron, React, TypeScr
 
 - Offline-first notes stored locally on the computer
 - Optional encrypted Google Drive sync
+- First-run private backup prompt with offline mode always available
 - Rich text editor with headings, lists, checklists, tables, code blocks, links, images, and attachments
 - Lock notes with a 6 digit passcode
 - Folders, pinned notes, smart sections, trash restore, and duplicate notes
@@ -44,7 +45,7 @@ The installer is created in `dist/`.
 
 ## Google Drive Sync
 
-Google Drive sync is optional. Each user signs in with their own Google account, and notes are stored in that user's own Google Drive.
+Google Drive sync is optional. Each user signs in with their own Google account, and notes are stored encrypted inside that user's hidden Google Drive app data area.
 
 For development, add a Google OAuth Desktop client in the app Settings:
 
@@ -52,7 +53,7 @@ For development, add a Google OAuth Desktop client in the app Settings:
 - Client Secret
 - Sync password for encrypting Drive data
 
-The app uses the Google Drive `drive.file` scope so it only works with files it creates or opens for this app.
+The app uses the Google Drive `drive.appdata` scope so sync files are hidden from normal My Drive views and are only accessible to this app.
 
 ## Publishing
 

@@ -402,7 +402,7 @@ export function SettingsModal({ onClose }: Props) {
             </div>
           )}
           <div className="settings-sync-note">
-            Drive data is encrypted before upload. The app reuses one protected Drive folder, keeps backups inside it, and uses soft-delete protection instead of deleting remote data permanently.
+            Drive data is encrypted before upload and stored in Google Drive's hidden app data area. Backups stay versioned there so users cannot accidentally delete the sync files from My Drive.
             {settings.syncLastSyncedAt && <span> Last sync: {new Date(settings.syncLastSyncedAt).toLocaleString()}.</span>}
             {typeof settings.syncLastConflictCount === 'number' && settings.syncLastConflictCount > 0 && <span> {settings.syncLastConflictCount} conflict copy created.</span>}
             {settings.syncLastError && <span className="settings-sync-error"> {settings.syncLastError}</span>}

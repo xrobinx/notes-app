@@ -13,11 +13,12 @@ import * as notesRepo from '../database/notesRepository'
 import * as foldersRepo from '../database/foldersRepository'
 import type { Note } from '../../src/types/index'
 
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata'
 const PROFILE_SCOPE = 'https://www.googleapis.com/auth/userinfo.email'
-const SYNC_FOLDER_NAME = 'Notes App Sync - Protected'
-const BACKUP_FOLDER_NAME = 'Encrypted Backups'
+const DRIVE_APP_DATA_PARENT = 'appDataFolder'
+const DRIVE_APP_DATA_SPACE = 'appDataFolder'
 const SYNC_FILE_NAME = 'notes-sync.encrypted.json'
+const BACKUP_FILE_PREFIX = 'notes-sync-backup-'
 
 let syncPassphrase: string | null = null
 let autoSyncTimer: NodeJS.Timeout | null = null
@@ -185,35 +186,9 @@ async function getAuthedClient(): Promise<any> {
   return oauth
 }
 
-async function findOrCreateFolder(drive: any, name: string, parentId?: string): Promise<string> {
-  const q = [
-    `name='${name.replace(/'/g, "\\'")}'`,
-    "mimeType='application/vnd.google-apps.folder'",
-    'trashed=false',
-    parentId ? `'${parentId}' in parents` : undefined,
-  ].filter(Boolean).join(' and ')
-  const found = await drive.files.list({
-    q,
-    fields: 'files(id,name,createdTime)',
-    orderBy: 'createdTime',
-    spaces: 'drive',
-  })
-  const existing = found.data.files?.[0]?.id
-  if (existing) return existing
-  const created = await drive.files.create({
-    requestBody: {
-      name,
-      mimeType: 'application/vnd.google-apps.folder',
-      parents: parentId ? [parentId] : undefined,
-    },
-    fields: 'id',
-  })
-  return created.data.id!
-}
-
 async function findFile(drive: any, name: string, parentId: string): Promise<{ id: string; name: string; modifiedTime?: string } | null> {
   const q = `name='${name.replace(/'/g, "\\'")}' and '${parentId}' in parents and trashed=false`
-  const found = await drive.files.list({ q, fields: 'files(id,name,modifiedTime)', spaces: 'drive' })
+  const found = await drive.files.list({ q, fields: 'files(id,name,modifiedTime)', spaces: DRIVE_APP_DATA_SPACE })
   return found.data.files?.[0] ?? null
 }
 
@@ -473,8 +448,8 @@ export async function syncNow(): Promise<{ ok: boolean; message?: string; error?
     const auth = await getAuthedClient()
     ensurePassphrase()
     const drive = google.drive({ version: 'v3', auth })
-    const rootFolderId = await findOrCreateFolder(drive, SYNC_FOLDER_NAME)
-    const backupFolderId = await findOrCreateFolder(drive, BACKUP_FOLDER_NAME, rootFolderId)
+    const rootFolderId = DRIVE_APP_DATA_PARENT
+    const backupFolderId = DRIVE_APP_DATA_PARENT
     const remoteFile = await findFile(drive, SYNC_FILE_NAME, rootFolderId)
 
     if (remoteFile) {
@@ -484,7 +459,7 @@ export async function syncNow(): Promise<{ ok: boolean; message?: string; error?
       await uploadBuffer(
         drive,
         backupFolderId,
-        `notes-sync-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.encrypted.json`,
+        `${BACKUP_FILE_PREFIX}${new Date().toISOString().replace(/[:.]/g, '-')}.encrypted.json`,
         remoteBuffer,
       )
     }
@@ -510,8 +485,8 @@ async function getDriveAndFolders(): Promise<{ drive: any; rootFolderId: string;
   const auth = await getAuthedClient()
   ensurePassphrase()
   const drive = google.drive({ version: 'v3', auth })
-  const rootFolderId = await findOrCreateFolder(drive, SYNC_FOLDER_NAME)
-  const backupFolderId = await findOrCreateFolder(drive, BACKUP_FOLDER_NAME, rootFolderId)
+  const rootFolderId = DRIVE_APP_DATA_PARENT
+  const backupFolderId = DRIVE_APP_DATA_PARENT
   return { drive, rootFolderId, backupFolderId }
 }
 
@@ -520,10 +495,10 @@ export async function listBackups(): Promise<{ ok: boolean; backups?: Array<{ id
     updateStatus('syncing')
     const { drive, backupFolderId } = await getDriveAndFolders()
     const response = await drive.files.list({
-      q: `'${backupFolderId}' in parents and trashed=false and name contains 'notes-sync-backup-'`,
+      q: `'${backupFolderId}' in parents and trashed=false and name contains '${BACKUP_FILE_PREFIX}'`,
       fields: 'files(id,name,modifiedTime,size)',
       orderBy: 'modifiedTime desc',
-      spaces: 'drive',
+      spaces: DRIVE_APP_DATA_SPACE,
       pageSize: 20,
     })
     updateStatus('synced')
