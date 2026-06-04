@@ -172,7 +172,11 @@ export function DesktopWidget(_props: { type: WidgetType }) {
 
   return (
     <div className="desktop-widget notes-widget">
-      <header className="widget-topbar" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
+      <header
+        className="widget-topbar"
+        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+        onDoubleClick={event => event.preventDefault()}
+      >
         <div className="widget-title">
           <StickyNote size={16} />
           <span>Notes Widget</span>

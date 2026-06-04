@@ -198,6 +198,9 @@ function openWidget(type: WidgetType): void {
     minHeight: 430,
     frame: false,
     resizable: true,
+    minimizable: true,
+    maximizable: false,
+    fullscreenable: false,
     backgroundColor: '#00000000',
     show: false,
     webPreferences: {
@@ -227,6 +230,8 @@ function openWidget(type: WidgetType): void {
   })
   widgetWindow.on('moved', saveWidgetBounds)
   widgetWindow.on('resized', saveWidgetBounds)
+  widgetWindow.on('maximize', () => widgetWindow.unmaximize())
+  widgetWindow.on('enter-full-screen', () => widgetWindow.setFullScreen(false))
   widgetWindow.on('close', saveWidgetBounds)
   widgetWindow.on('closed', () => {
     widgetWindows.delete(widgetKey)
