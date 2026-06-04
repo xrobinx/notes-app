@@ -178,9 +178,13 @@ export function DesktopWidget(_props: { type: WidgetType }) {
           <span>Notes Widget</span>
         </div>
         <div className="widget-toolbar" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <button onClick={() => insertEntry('text')} title="Add note row">
+            <FileText size={14} />
+            <span>Note</span>
+          </button>
           <button onClick={() => insertEntry('check')} title="Add checklist row">
             <ListChecks size={14} />
-            <span>List</span>
+            <span>Checklist</span>
           </button>
           <button className="icon-only" onClick={() => window.api.window.closeCurrent()} title="Close widget">
             <X size={14} />
@@ -251,8 +255,6 @@ export function DesktopWidget(_props: { type: WidgetType }) {
       </main>
 
       <footer className="widget-bottombar" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-        <button onClick={() => insertEntry('text')}><FileText size={13} /> Note</button>
-        <button onClick={() => insertEntry('check')}><ListChecks size={13} /> Checklist</button>
         <span>{wordCount} words</span>
       </footer>
     </div>

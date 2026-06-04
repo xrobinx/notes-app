@@ -26,9 +26,9 @@
 }
 
 .widget-bottombar {
-  min-height: 45px;
-  gap: 8px;
-  padding: 5px 14px;
+  min-height: 34px;
+  justify-content: flex-end;
+  padding: 4px 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -60,7 +60,6 @@
 }
 
 .widget-toolbar button,
-.widget-bottombar button,
 .widget-check-toggle,
 .widget-entry-delete {
   border: none;
@@ -82,8 +81,7 @@
   font-weight: 750;
 }
 
-.widget-toolbar button:hover,
-.widget-bottombar button:hover {
+.widget-toolbar button:hover {
   background: rgba(255, 214, 10, 0.13);
   color: var(--accent);
 }
@@ -210,18 +208,7 @@
   color: #ff6961;
 }
 
-.widget-bottombar button {
-  height: 30px;
-  gap: 6px;
-  border-radius: 8px;
-  padding: 0 10px;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 750;
-}
-
 .widget-bottombar span {
-  margin-left: auto;
   color: var(--text-tertiary);
   font-size: 11px;
   font-weight: 700;
