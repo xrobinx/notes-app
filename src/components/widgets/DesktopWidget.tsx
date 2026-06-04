@@ -1,137 +1,184 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Check, CheckSquare, GripVertical, ListChecks, Plus, StickyNote, Trash2, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Check, FileText, ListChecks, Plus, StickyNote, Trash2, X } from 'lucide-react'
 import { useSettingsStore } from '../../store/settingsStore'
 import { getTranslationLanguage } from '../../utils/languages'
 import './DesktopWidget.css'
 
 export type WidgetType = 'widget' | 'all' | 'note' | 'todo' | 'today' | 'pinned' | 'quick' | 'checklist' | 'reminder'
 
-type WidgetBlock =
-  | { id: string; type: 'note'; text: string }
-  | { id: string; type: 'checklist'; title: string; items: ChecklistItem[] }
+type WidgetEntry =
+  | { id: string; type: 'text'; text: string }
+  | { id: string; type: 'check'; text: string; done: boolean }
 
-interface ChecklistItem {
+interface LegacyChecklistItem {
   id: string
   text: string
   done: boolean
 }
 
+interface LegacyBlock {
+  id: string
+  type: 'note' | 'checklist'
+  text?: string
+  title?: string
+  items?: LegacyChecklistItem[]
+}
+
 interface WidgetData {
-  blocks: WidgetBlock[]
+  entries?: WidgetEntry[]
+  blocks?: LegacyBlock[]
 }
 
 const STORAGE_KEY = 'notes-widget-main'
 
-function createNoteBlock(): WidgetBlock {
-  return { id: crypto.randomUUID(), type: 'note', text: '' }
+function createTextEntry(text = ''): WidgetEntry {
+  return { id: crypto.randomUUID(), type: 'text', text }
 }
 
-function createChecklistBlock(): WidgetBlock {
-  return { id: crypto.randomUUID(), type: 'checklist', title: 'Checklist', items: [] }
+function createCheckEntry(text = ''): WidgetEntry {
+  return { id: crypto.randomUUID(), type: 'check', text, done: false }
 }
 
-function loadWidgetData(): WidgetData {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Partial<WidgetData>
-    if (Array.isArray(saved.blocks) && saved.blocks.length > 0) return { blocks: saved.blocks }
-  } catch {
-    // Ignore old widget data.
+function migrateBlocks(blocks: LegacyBlock[]): WidgetEntry[] {
+  const entries: WidgetEntry[] = []
+  for (const block of blocks) {
+    if (block.type === 'note') {
+      entries.push(createTextEntry(block.text ?? ''))
+    }
+    if (block.type === 'checklist') {
+      if (block.title && block.title !== 'Checklist') entries.push(createTextEntry(block.title))
+      for (const item of block.items ?? []) {
+        entries.push({ id: item.id || crypto.randomUUID(), type: 'check', text: item.text, done: item.done })
+      }
+    }
   }
-  return { blocks: [createNoteBlock()] }
+  return entries.length ? entries : [createTextEntry()]
+}
+
+function loadWidgetEntries(): WidgetEntry[] {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as WidgetData
+    if (Array.isArray(saved.entries) && saved.entries.length > 0) return saved.entries
+    if (Array.isArray(saved.blocks) && saved.blocks.length > 0) return migrateBlocks(saved.blocks)
+  } catch {
+    // Ignore older or broken widget data.
+  }
+  return [createTextEntry()]
+}
+
+function autoSizeTextarea(element: HTMLTextAreaElement | null) {
+  if (!element) return
+  element.style.height = 'auto'
+  element.style.height = `${Math.max(42, element.scrollHeight)}px`
 }
 
 export function DesktopWidget(_props: { type: WidgetType }) {
   const settings = useSettingsStore()
   const language = getTranslationLanguage(settings.translationLanguage)
-  const [blocks, setBlocks] = useState<WidgetBlock[]>([])
+  const [entries, setEntries] = useState<WidgetEntry[]>([])
   const [loaded, setLoaded] = useState(false)
-  const [newTaskText, setNewTaskText] = useState<Record<string, string>>({})
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
-  const [editingText, setEditingText] = useState('')
+  const [activeEntryId, setActiveEntryId] = useState<string | null>(null)
+  const pendingFocusId = useRef<string | null>(null)
+  const textRefs = useRef(new Map<string, HTMLTextAreaElement>())
+  const inputRefs = useRef(new Map<string, HTMLInputElement>())
 
-  const wordCount = useMemo(() => {
-    const words = blocks.flatMap(block => {
-      if (block.type === 'note') return block.text.trim().split(/\s+/).filter(Boolean)
-      return [block.title, ...block.items.map(item => item.text)].join(' ').trim().split(/\s+/).filter(Boolean)
-    })
-    return words.length
-  }, [blocks])
+  const wordCount = useMemo(() => (
+    entries
+      .map(entry => entry.text)
+      .join(' ')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .length
+  ), [entries])
 
   useEffect(() => {
     if (!settings.loaded) void settings.load()
   }, [settings])
 
   useEffect(() => {
-    const data = loadWidgetData()
-    setBlocks(data.blocks)
+    setEntries(loadWidgetEntries())
     setLoaded(true)
   }, [])
 
   useEffect(() => {
     if (!loaded) return
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ blocks }))
-  }, [blocks, loaded])
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ entries }))
+  }, [entries, loaded])
 
-  const addBlock = (type: 'note' | 'checklist') => {
-    setBlocks(items => [...items, type === 'note' ? createNoteBlock() : createChecklistBlock()])
-  }
+  useEffect(() => {
+    const id = pendingFocusId.current
+    if (!id) return
+    pendingFocusId.current = null
+    requestAnimationFrame(() => {
+      const target = textRefs.current.get(id) ?? inputRefs.current.get(id)
+      target?.focus()
+      if (target instanceof HTMLTextAreaElement) autoSizeTextarea(target)
+    })
+  }, [entries])
 
-  const updateBlock = (id: string, patch: Partial<WidgetBlock>) => {
-    setBlocks(items => items.map(block => block.id === id ? { ...block, ...patch } as WidgetBlock : block))
-  }
-
-  const deleteBlock = (id: string) => {
-    setBlocks(items => {
-      const next = items.filter(block => block.id !== id)
-      return next.length ? next : [createNoteBlock()]
+  const insertEntry = (type: 'text' | 'check') => {
+    const entry = type === 'text' ? createTextEntry() : createCheckEntry()
+    pendingFocusId.current = entry.id
+    setEntries(current => {
+      const activeIndex = activeEntryId ? current.findIndex(item => item.id === activeEntryId) : -1
+      const next = [...current]
+      next.splice(activeIndex >= 0 ? activeIndex + 1 : next.length, 0, entry)
+      return next
     })
   }
 
-  const addChecklistItem = (block: Extract<WidgetBlock, { type: 'checklist' }>) => {
-    const text = (newTaskText[block.id] ?? '').trim()
-    if (!text) return
-    updateBlock(block.id, {
-      items: [...block.items, { id: crypto.randomUUID(), text, done: false }],
-    })
-    setNewTaskText(values => ({ ...values, [block.id]: '' }))
+  const updateEntry = (id: string, patch: Partial<WidgetEntry>) => {
+    setEntries(current => current.map(entry => entry.id === id ? { ...entry, ...patch } as WidgetEntry : entry))
   }
 
-  const updateChecklistItem = (
-    block: Extract<WidgetBlock, { type: 'checklist' }>,
-    itemId: string,
-    patch: Partial<ChecklistItem>,
-  ) => {
-    updateBlock(block.id, {
-      items: block.items.map(item => item.id === itemId ? { ...item, ...patch } : item),
+  const deleteEntry = (id: string) => {
+    setEntries(current => {
+      const next = current.filter(entry => entry.id !== id)
+      return next.length ? next : [createTextEntry()]
     })
   }
 
-  const deleteChecklistItem = (block: Extract<WidgetBlock, { type: 'checklist' }>, itemId: string) => {
-    updateBlock(block.id, {
-      items: block.items.filter(item => item.id !== itemId),
-    })
+  const splitTextIntoChecklist = (entry: Extract<WidgetEntry, { type: 'text' }>) => {
+    const lines = entry.text.split('\n').map(line => line.trim()).filter(Boolean)
+    const checks = lines.length ? lines.map(line => createCheckEntry(line)) : [createCheckEntry()]
+    pendingFocusId.current = checks[0].id
+    setEntries(current => current.flatMap(item => item.id === entry.id ? checks : [item]))
   }
 
-  const finishTaskEdit = (block: Extract<WidgetBlock, { type: 'checklist' }>, itemId: string) => {
-    const text = editingText.trim()
-    if (text) updateChecklistItem(block, itemId, { text })
-    setEditingTaskId(null)
-    setEditingText('')
+  const handleTextKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>, entry: Extract<WidgetEntry, { type: 'text' }>) => {
+    if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'l') return
+    event.preventDefault()
+    splitTextIntoChecklist(entry)
+  }
+
+  const handleCheckKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, entry: Extract<WidgetEntry, { type: 'check' }>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      const next = createCheckEntry()
+      pendingFocusId.current = next.id
+      setEntries(current => {
+        const index = current.findIndex(item => item.id === entry.id)
+        const copy = [...current]
+        copy.splice(index + 1, 0, next)
+        return copy
+      })
+    }
+    if (event.key === 'Backspace' && !entry.text) {
+      event.preventDefault()
+      deleteEntry(entry.id)
+    }
   }
 
   return (
     <div className="desktop-widget notes-widget">
       <header className="widget-topbar" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
         <div className="widget-title">
-          <StickyNote size={15} />
+          <StickyNote size={16} />
           <span>Notes Widget</span>
         </div>
         <div className="widget-toolbar" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-          <button onClick={() => addBlock('note')} title="Add writing block">
-            <StickyNote size={14} />
-            <span>Note</span>
-          </button>
-          <button onClick={() => addBlock('checklist')} title="Add checklist block">
+          <button onClick={() => insertEntry('check')} title="Add checklist row">
             <ListChecks size={14} />
             <span>List</span>
           </button>
@@ -141,90 +188,71 @@ export function DesktopWidget(_props: { type: WidgetType }) {
         </div>
       </header>
 
-      <main className="widget-canvas">
-        {blocks.map(block => (
-          <section key={block.id} className={`widget-block widget-block-${block.type}`}>
-            <div className="widget-block-handle">
-              <GripVertical size={13} />
-              <button onClick={() => deleteBlock(block.id)} title="Remove block">
+      <main className="widget-sheet">
+        {entries.map((entry, index) => {
+          const previous = entries[index - 1]
+          const showDivider = Boolean(previous && previous.type !== entry.type)
+          if (entry.type === 'text') {
+            return (
+              <div key={entry.id} className={`widget-entry widget-text-entry ${showDivider ? 'has-divider' : ''}`}>
+                <textarea
+                  ref={element => {
+                    if (element) {
+                      textRefs.current.set(entry.id, element)
+                      autoSizeTextarea(element)
+                    } else {
+                      textRefs.current.delete(entry.id)
+                    }
+                  }}
+                  value={entry.text}
+                  spellCheck={settings.spellcheckEnabled}
+                  lang={language.spellcheck}
+                  placeholder="Type anything here..."
+                  onFocus={() => setActiveEntryId(entry.id)}
+                  onInput={event => autoSizeTextarea(event.currentTarget)}
+                  onChange={event => updateEntry(entry.id, { text: event.target.value })}
+                  onKeyDown={event => handleTextKeyDown(event, entry)}
+                />
+                <button className="widget-entry-delete" onClick={() => deleteEntry(entry.id)} title="Delete text">
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            )
+          }
+
+          return (
+            <div key={entry.id} className={`widget-entry widget-check-entry ${showDivider ? 'has-divider' : ''}`}>
+              <button
+                className="widget-check-toggle"
+                onClick={() => updateEntry(entry.id, { done: !entry.done })}
+                title={entry.done ? 'Mark incomplete' : 'Mark complete'}
+              >
+                {entry.done && <Check size={12} />}
+              </button>
+              <input
+                ref={element => {
+                  if (element) inputRefs.current.set(entry.id, element)
+                  else inputRefs.current.delete(entry.id)
+                }}
+                value={entry.text}
+                spellCheck={settings.spellcheckEnabled}
+                lang={language.spellcheck}
+                placeholder="List item"
+                onFocus={() => setActiveEntryId(entry.id)}
+                onChange={event => updateEntry(entry.id, { text: event.target.value })}
+                onKeyDown={event => handleCheckKeyDown(event, entry)}
+              />
+              <button className="widget-entry-delete" onClick={() => deleteEntry(entry.id)} title="Delete item">
                 <Trash2 size={12} />
               </button>
             </div>
-
-            {block.type === 'note' && (
-              <textarea
-                value={block.text}
-                spellCheck={settings.spellcheckEnabled}
-                lang={language.spellcheck}
-                placeholder="Write here..."
-                onChange={event => updateBlock(block.id, { text: event.target.value })}
-              />
-            )}
-
-            {block.type === 'checklist' && (
-              <div className="widget-checklist-block">
-                <input
-                  className="widget-checklist-title"
-                  value={block.title}
-                  spellCheck={settings.spellcheckEnabled}
-                  lang={language.spellcheck}
-                  onChange={event => updateBlock(block.id, { title: event.target.value })}
-                />
-                <div className="widget-checklist-items">
-                  {block.items.map(item => (
-                    <div key={item.id} className={`widget-task ${item.done ? 'done' : ''}`}>
-                      <button
-                        className="widget-task-check"
-                        onClick={() => updateChecklistItem(block, item.id, { done: !item.done })}
-                        title={item.done ? 'Mark incomplete' : 'Mark complete'}
-                      >
-                        {item.done && <Check size={11} />}
-                      </button>
-                      {editingTaskId === item.id ? (
-                        <input
-                          autoFocus
-                          value={editingText}
-                          spellCheck={settings.spellcheckEnabled}
-                          lang={language.spellcheck}
-                          onChange={event => setEditingText(event.target.value)}
-                          onBlur={() => finishTaskEdit(block, item.id)}
-                          onKeyDown={event => {
-                            if (event.key === 'Enter') finishTaskEdit(block, item.id)
-                            if (event.key === 'Escape') setEditingTaskId(null)
-                          }}
-                        />
-                      ) : (
-                        <em onClick={() => { setEditingTaskId(item.id); setEditingText(item.text) }}>{item.text}</em>
-                      )}
-                      <button className="widget-task-delete" onClick={() => deleteChecklistItem(block, item.id)} title="Delete item">
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div className="widget-add-task">
-                  <CheckSquare size={14} />
-                  <input
-                    value={newTaskText[block.id] ?? ''}
-                    spellCheck={settings.spellcheckEnabled}
-                    lang={language.spellcheck}
-                    placeholder="Add item"
-                    onChange={event => setNewTaskText(values => ({ ...values, [block.id]: event.target.value }))}
-                    onKeyDown={event => {
-                      if (event.key === 'Enter') addChecklistItem(block)
-                    }}
-                  />
-                  <button onClick={() => addChecklistItem(block)} title="Add item"><Plus size={13} /></button>
-                </div>
-              </div>
-            )}
-          </section>
-        ))}
+          )
+        })}
       </main>
 
       <footer className="widget-bottombar" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-        <button onClick={() => addBlock('note')}><StickyNote size={13} /> Note</button>
-        <button onClick={() => addBlock('checklist')}><ListChecks size={13} /> Checklist</button>
+        <button onClick={() => insertEntry('text')}><FileText size={13} /> Note</button>
+        <button onClick={() => insertEntry('check')}><ListChecks size={13} /> Checklist</button>
         <span>{wordCount} words</span>
       </footer>
     </div>

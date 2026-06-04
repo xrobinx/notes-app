@@ -177,7 +177,7 @@ function openWidget(type: WidgetType): void {
   }
 
   const sizes: Record<WidgetType, { width: number; height: number }> = {
-    widget: { width: 360, height: 520 },
+    widget: { width: 456, height: 654 },
     today: { width: 340, height: 500 },
     pinned: { width: 320, height: 310 },
     quick: { width: 300, height: 260 },
@@ -194,8 +194,8 @@ function openWidget(type: WidgetType): void {
     height: savedBounds?.height ?? size.height,
     x: savedBounds?.x,
     y: savedBounds?.y,
-    minWidth: 260,
-    minHeight: 220,
+    minWidth: 330,
+    minHeight: 430,
     frame: false,
     resizable: true,
     backgroundColor: '#00000000',
