@@ -88,6 +88,30 @@ function loadRenderer(window: BrowserWindow, widget?: WidgetType): void {
   }
 }
 
+function registerZoomShortcuts(window: BrowserWindow): void {
+  window.webContents.on('before-input-event', (event, input) => {
+    if (!(input.control || input.meta) || input.alt) return
+    const key = input.key.toLowerCase()
+    const code = input.code
+    const isZoomIn = key === '+' || key === '=' || code === 'Equal' || code === 'NumpadAdd'
+    const isZoomOut = key === '-' || code === 'Minus' || code === 'NumpadSubtract'
+    const isReset = key === '0' || code === 'Digit0' || code === 'Numpad0'
+    if (!isZoomIn && !isZoomOut && !isReset) return
+
+    event.preventDefault()
+    if (isReset) {
+      window.webContents.setZoomFactor(1)
+      return
+    }
+
+    const current = window.webContents.getZoomFactor()
+    const next = isZoomIn
+      ? Math.min(2, current + 0.1)
+      : Math.max(0.5, current - 0.1)
+    window.webContents.setZoomFactor(Number(next.toFixed(2)))
+  })
+}
+
 function createWindow(): void {
   const iconPath = join(__dirname, '../../resources/icon.ico')
   mainWindow = new BrowserWindow({
@@ -108,6 +132,8 @@ function createWindow(): void {
       spellcheck: true
     }
   })
+
+  registerZoomShortcuts(mainWindow)
 
   mainWindow.webContents.on('context-menu', (_event, params) => {
     if (!params.isEditable) return
@@ -211,6 +237,8 @@ function openWidget(type: WidgetType): void {
       spellcheck: true
     }
   })
+
+  registerZoomShortcuts(widgetWindow)
 
   widgetWindows.set(widgetKey, widgetWindow)
   persistOpenWidgets()
