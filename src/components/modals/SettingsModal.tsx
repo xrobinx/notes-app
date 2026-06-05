@@ -550,6 +550,19 @@ export function SettingsModal({ onClose }: Props) {
             </div>
             <button disabled={settings.performanceMode} className="settings-action-btn" onClick={() => window.api.widgets.open('widget')}>Open Widget</button>
           </div>
+          <div className="settings-toggle-row">
+            <label>
+              <input
+                type="checkbox"
+                checked={settings.startWidgetOnLogin}
+                onChange={event => settings.setSetting('startWidgetOnLogin', event.target.checked)}
+              />
+              Start widget with Windows
+            </label>
+          </div>
+          <div className="settings-sync-note">
+            Startup opens only the desktop widget and tray icon, not the full Notes window.
+          </div>
           {settings.performanceMode && <div className="settings-sync-note">Widgets are off while Performance mode is enabled.</div>}
         </section>
 

@@ -3,7 +3,7 @@ import { join } from 'path'
 import { autoUpdater } from 'electron-updater'
 import { registerNotesIpc } from './ipc/notes'
 import { registerFoldersIpc } from './ipc/folders'
-import { registerSettingsIpc } from './ipc/settings'
+import { registerSettingsIpc, syncWidgetLoginSetting, WIDGET_STARTUP_ARG } from './ipc/settings'
 import { registerFilesIpc } from './ipc/files'
 import { registerSyncIpc } from './ipc/sync'
 import { closeDb } from './database/db'
@@ -18,6 +18,7 @@ const widgetWindows = new Map<string, BrowserWindow>()
 const reminderTimers = new Map<string, NodeJS.Timeout>()
 let appIsQuitting = false
 let restoredWidgetsOnLaunch = false
+const isWidgetStartupLaunch = process.argv.includes(WIDGET_STARTUP_ARG)
 
 type WidgetType = 'widget' | 'today' | 'pinned' | 'quick' | 'checklist' | 'reminder' | 'all' | 'note' | 'todo'
 const widgetTypes: WidgetType[] = ['widget', 'today', 'pinned', 'quick', 'checklist', 'reminder', 'all', 'note', 'todo']
@@ -399,13 +400,19 @@ app.whenReady().then(() => {
   registerFilesIpc()
   registerSyncIpc()
 
-  createWindow()
   createTray()
-  setupAutoUpdates()
+  syncWidgetLoginSetting()
+
+  if (isWidgetStartupLaunch) {
+    openWidget('widget')
+  } else {
+    createWindow()
+    setupAutoUpdates()
+  }
 
   // Clean up old trash on launch
   try { emptyOldTrash() } catch { /* ignore */ }
-  if (!getSettings().performanceMode) scheduleAutoSync(5000)
+  if (!isWidgetStartupLaunch && !getSettings().performanceMode) scheduleAutoSync(5000)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

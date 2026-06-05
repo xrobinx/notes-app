@@ -30,6 +30,7 @@ const DEFAULTS: Settings = {
   performanceMode: false,
   translationLanguage: 'ms',
   shortcuts: DEFAULT_SHORTCUTS,
+  startWidgetOnLogin: false,
   openWidgets: [],
   widgetBounds: {}
 }

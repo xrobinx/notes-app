@@ -40,6 +40,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   performanceMode: false,
   translationLanguage: 'ms',
   shortcuts: DEFAULT_SHORTCUTS,
+  startWidgetOnLogin: false,
   openWidgets: [],
   widgetBounds: {},
   loaded: false,
