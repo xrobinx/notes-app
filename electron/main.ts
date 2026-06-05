@@ -19,6 +19,8 @@ const reminderTimers = new Map<string, NodeJS.Timeout>()
 let appIsQuitting = false
 let restoredWidgetsOnLaunch = false
 const isWidgetStartupLaunch = process.argv.includes(WIDGET_STARTUP_ARG)
+let autoUpdatesStarted = false
+let autoSyncStarted = false
 
 type WidgetType = 'widget' | 'today' | 'pinned' | 'quick' | 'checklist' | 'reminder' | 'all' | 'note' | 'todo'
 const widgetTypes: WidgetType[] = ['widget', 'today', 'pinned', 'quick', 'checklist', 'reminder', 'all', 'note', 'todo']
@@ -185,9 +187,37 @@ function createWindow(): void {
   mainWindow.on('unmaximize', () => {
     mainWindow!.webContents.send('window:state-changed', false)
   })
+  mainWindow.on('closed', () => {
+    mainWindow = null
+  })
 
   loadRenderer(mainWindow)
   configureSpellchecker()
+}
+
+function startFullAppServices(): void {
+  if (!autoUpdatesStarted) {
+    setupAutoUpdates()
+    autoUpdatesStarted = true
+  }
+  if (!autoSyncStarted && !getSettings().performanceMode) {
+    scheduleAutoSync(5000)
+    autoSyncStarted = true
+  }
+}
+
+function ensureMainWindow(): BrowserWindow {
+  if (!mainWindow || mainWindow.isDestroyed()) createWindow()
+  return mainWindow!
+}
+
+function showMainWindow(): BrowserWindow {
+  const window = ensureMainWindow()
+  if (window.isMinimized()) window.restore()
+  window.show()
+  window.focus()
+  startFullAppServices()
+  return window
 }
 
 function openWidget(type: WidgetType): void {
@@ -291,10 +321,7 @@ function createTray(): void {
   tray.setContextMenu(Menu.buildFromTemplate([
     {
       label: 'Open Notes',
-      click: () => {
-        mainWindow?.show()
-        mainWindow?.focus()
-      }
+      click: () => showMainWindow()
     },
     {
       label: 'Desktop Widgets',
@@ -310,8 +337,7 @@ function createTray(): void {
   ]))
 
   tray.on('click', () => {
-    mainWindow?.show()
-    mainWindow?.focus()
+    showMainWindow()
   })
 }
 
@@ -343,10 +369,12 @@ ipcMain.handle('window:is-maximized', () => mainWindow?.isMaximized() ?? false)
 ipcMain.handle('widgets:open', (_event, type: WidgetType) => openWidget(type))
 ipcMain.handle('widgets:open-note', (_event, noteId: string) => {
   setSetting('lastOpenNoteId', noteId)
-  if (!mainWindow || mainWindow.isDestroyed()) createWindow()
-  mainWindow?.show()
-  mainWindow?.focus()
-  mainWindow?.webContents.send('notes:open-note', noteId)
+  const window = showMainWindow()
+  if (window.webContents.isLoading()) {
+    window.webContents.once('did-finish-load', () => window.webContents.send('notes:open-note', noteId))
+  } else {
+    window.webContents.send('notes:open-note', noteId)
+  }
   return { ok: true }
 })
 ipcMain.handle('language:refresh-spellchecker', () => configureSpellchecker())
@@ -407,15 +435,14 @@ app.whenReady().then(() => {
     openWidget('widget')
   } else {
     createWindow()
-    setupAutoUpdates()
+    startFullAppServices()
   }
 
   // Clean up old trash on launch
   try { emptyOldTrash() } catch { /* ignore */ }
-  if (!isWidgetStartupLaunch && !getSettings().performanceMode) scheduleAutoSync(5000)
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    showMainWindow()
   })
 })
 
