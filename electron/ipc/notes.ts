@@ -1,7 +1,13 @@
-import { ipcMain } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
 import * as repo from '../database/notesRepository'
 import { scheduleAutoSync } from '../sync/driveSync'
 import type { Note } from '../../src/types/index'
+
+function broadcastNoteUpdated(id: string): void {
+  for (const window of BrowserWindow.getAllWindows()) {
+    window.webContents.send('notes:updated', id)
+  }
+}
 
 export function registerNotesIpc(): void {
   ipcMain.handle('notes:list', (_e, folderId?: string | null) => repo.listNotes(folderId))
@@ -14,6 +20,7 @@ export function registerNotesIpc(): void {
   ipcMain.handle('notes:update', (_e, id: string, patch: Partial<Note>) => {
     repo.updateNote(id, patch)
     scheduleAutoSync()
+    broadcastNoteUpdated(id)
   })
   ipcMain.handle('notes:delete', (_e, id: string) => {
     repo.softDeleteNote(id)

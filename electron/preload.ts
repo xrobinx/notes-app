@@ -54,6 +54,8 @@ contextBridge.exposeInMainWorld('api', {
   },
   widgets: {
     open: (type: 'widget' | 'today' | 'pinned' | 'quick' | 'checklist' | 'reminder' | 'all' | 'note' | 'todo') => ipcRenderer.invoke('widgets:open', type),
+    loadNote: () => ipcRenderer.invoke('widgets:load-note'),
+    saveNote: (patch: { body: string; plainText: string }) => ipcRenderer.invoke('widgets:save-note', patch),
     openNote: (noteId: string) => ipcRenderer.invoke('widgets:open-note', noteId),
     scheduleReminder: (reminder: { id: string; text: string; dueAt: string }) =>
       ipcRenderer.invoke('widgets:schedule-reminder', reminder),
@@ -107,6 +109,11 @@ contextBridge.exposeInMainWorld('api', {
       const handler = (_e: Electron.IpcRendererEvent, id: string) => cb(id)
       ipcRenderer.on('notes:open-note', handler)
       return () => ipcRenderer.removeListener('notes:open-note', handler)
+    },
+    noteUpdated: (cb: (id: string) => void) => {
+      const handler = (_e: Electron.IpcRendererEvent, id: string) => cb(id)
+      ipcRenderer.on('notes:updated', handler)
+      return () => ipcRenderer.removeListener('notes:updated', handler)
     }
   }
 })

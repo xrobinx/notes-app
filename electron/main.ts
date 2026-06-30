@@ -8,9 +8,10 @@ import { registerFilesIpc } from './ipc/files'
 import { registerSyncIpc } from './ipc/sync'
 import { closeDb } from './database/db'
 import { emptyOldTrash } from './database/notesRepository'
-import { getSettings, setSetting } from './database/settingsRepository'
+import { getRawSetting, getSettings, setRawSetting, setSetting } from './database/settingsRepository'
 import { scheduleAutoSync } from './sync/driveSync'
 import { getTranslationLanguage } from '../src/utils/languages'
+import * as notesRepo from './database/notesRepository'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -21,6 +22,7 @@ let restoredWidgetsOnLaunch = false
 const isWidgetStartupLaunch = process.argv.includes(WIDGET_STARTUP_ARG)
 let autoUpdatesStarted = false
 let autoSyncStarted = false
+const WIDGET_NOTE_ID_KEY = 'widgetNoteId'
 
 type WidgetType = 'widget' | 'today' | 'pinned' | 'quick' | 'checklist' | 'reminder' | 'all' | 'note' | 'todo'
 const widgetTypes: WidgetType[] = ['widget', 'today', 'pinned', 'quick', 'checklist', 'reminder', 'all', 'note', 'todo']
@@ -220,6 +222,20 @@ function showMainWindow(): BrowserWindow {
   return window
 }
 
+function getOrCreateWidgetNote() {
+  const savedId = getRawSetting<string>(WIDGET_NOTE_ID_KEY)
+  const savedNote = savedId ? notesRepo.getNote(savedId) : null
+  if (savedNote && !savedNote.deletedAt) return savedNote
+
+  const note = notesRepo.createNote(null)
+  notesRepo.updateNote(note.id, {
+    title: 'Notes Widget',
+    plainText: '',
+  })
+  setRawSetting(WIDGET_NOTE_ID_KEY, note.id)
+  return notesRepo.getNote(note.id) ?? note
+}
+
 function openWidget(type: WidgetType): void {
   if (!widgetTypes.includes(type)) return
   if (getSettings().performanceMode) return
@@ -367,6 +383,19 @@ ipcMain.on('window:close-current', event => {
 })
 ipcMain.handle('window:is-maximized', () => mainWindow?.isMaximized() ?? false)
 ipcMain.handle('widgets:open', (_event, type: WidgetType) => openWidget(type))
+ipcMain.handle('widgets:load-note', () => getOrCreateWidgetNote())
+ipcMain.handle('widgets:save-note', (_event, patch: { body: string; plainText: string }) => {
+  const note = getOrCreateWidgetNote()
+  notesRepo.updateNote(note.id, {
+    body: patch.body,
+    plainText: patch.plainText,
+  })
+  scheduleAutoSync()
+  for (const window of BrowserWindow.getAllWindows()) {
+    window.webContents.send('notes:updated', note.id)
+  }
+  return notesRepo.getNote(note.id)
+})
 ipcMain.handle('widgets:open-note', (_event, noteId: string) => {
   setSetting('lastOpenNoteId', noteId)
   const window = showMainWindow()

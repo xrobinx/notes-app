@@ -85,6 +85,18 @@ export function AppLayout() {
     })
   }, [])
 
+  useEffect(() => {
+    return window.api.on.noteUpdated(async id => {
+      const updated = await window.api.notes.get(id)
+      if (!updated) return
+      useNotesStore.setState(state => ({
+        notes: state.notes.some(note => note.id === id)
+          ? state.notes.map(note => note.id === id ? { ...updated, bodyLoaded: true } : note)
+          : [updated, ...state.notes]
+      }))
+    })
+  }, [])
+
   return (
     <div className="app-layout">
       <TitleBar />

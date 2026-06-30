@@ -27,7 +27,8 @@
 
 .widget-bottombar {
   min-height: 34px;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: 12px;
   padding: 4px 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -84,6 +85,16 @@
 .widget-toolbar button:hover {
   background: rgba(255, 214, 10, 0.13);
   color: var(--accent);
+}
+
+.widget-toolbar button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.widget-toolbar button:disabled:hover {
+  background: transparent;
+  color: var(--text-secondary);
 }
 
 .widget-toolbar .icon-only {
@@ -212,4 +223,8 @@
   color: var(--text-tertiary);
   font-size: 11px;
   font-weight: 700;
+}
+
+.widget-bottombar span:first-child {
+  color: var(--text-secondary);
 }

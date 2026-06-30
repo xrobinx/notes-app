@@ -56,7 +56,10 @@ export interface ElectronAPI {
     isMaximized: () => Promise<boolean>
   }
   widgets: {
-    open: (type: 'all' | 'note' | 'todo' | 'reminder') => Promise<void>
+    open: (type: 'widget' | 'today' | 'pinned' | 'quick' | 'checklist' | 'reminder' | 'all' | 'note' | 'todo') => Promise<void>
+    loadNote: () => Promise<Note>
+    saveNote: (patch: { body: string; plainText: string }) => Promise<Note | null>
+    openNote: (noteId: string) => Promise<{ ok: boolean }>
     scheduleReminder: (reminder: { id: string; text: string; dueAt: string }) => Promise<{ ok: boolean; error?: string }>
     cancelReminder: (id: string) => Promise<{ ok: boolean }>
   }
@@ -89,6 +92,8 @@ export interface ElectronAPI {
     windowStateChange: (cb: (isMaximized: boolean) => void) => () => void
     themeChange: (cb: (isDark: boolean) => void) => () => void
     reminderFired: (cb: (id: string) => void) => () => void
+    openNote: (cb: (id: string) => void) => () => void
+    noteUpdated: (cb: (id: string) => void) => () => void
   }
 }
 
