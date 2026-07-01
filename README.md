@@ -83,4 +83,4 @@ Friends can download and run `Notes Setup 1.0.0.exe`.
 
 - The app is not code-signed yet, so Windows SmartScreen may warn users the first time they install it.
 - Auto-update works only after releases are published properly on GitHub.
-- Google OAuth should be published/verified in Google Cloud before sharing with many users.
+- Google OAuth should be published/verified in Google Cloud before sharing with many users. - still in testing
