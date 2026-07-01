@@ -6,6 +6,8 @@ import { useFoldersStore } from './store/foldersStore'
 import { DesktopWidget, type WidgetType } from './components/widgets/DesktopWidget'
 import { OnboardingModal } from './components/modals/OnboardingModal'
 import { markReminderNotified, scheduleAllReminders } from './utils/reminderStorage'
+import { MobileApp } from './mobile/MobileApp'
+import { isMobileRuntime } from './mobile/runtime'
 import './styles/global.css'
 import './styles/titlebar.css'
 
@@ -14,6 +16,10 @@ export function App() {
 
   if (widgetType) {
     return <DesktopWidget type={widgetType} />
+  }
+
+  if (isMobileRuntime()) {
+    return <MobileApp />
   }
 
   return <MainApp />

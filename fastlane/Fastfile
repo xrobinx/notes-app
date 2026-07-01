@@ -1,0 +1,46 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Build and upload Notes to TestFlight"
+  lane :beta do
+    bundle_id = ENV.fetch("IOS_BUNDLE_ID", "com.notesapp.ios")
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("APP_STORE_CONNECT_KEY_ID"),
+      issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+      key_content: ENV.fetch("APP_STORE_CONNECT_PRIVATE_KEY"),
+      is_key_content_base64: true,
+      in_house: false
+    )
+
+    if ENV["MATCH_GIT_URL"].to_s.length > 0
+      match(
+        type: "appstore",
+        app_identifier: bundle_id,
+        readonly: true,
+        git_url: ENV["MATCH_GIT_URL"],
+        api_key: api_key
+      )
+    end
+
+    update_code_signing_settings(
+      use_automatic_signing: ENV["MATCH_GIT_URL"].to_s.empty?,
+      path: "ios/App/App.xcodeproj"
+    )
+
+    build_app(
+      project: "ios/App/App.xcodeproj",
+      scheme: "App",
+      export_method: "app-store",
+      output_directory: "build/ios",
+      output_name: "Notes.ipa",
+      xcargs: "PRODUCT_BUNDLE_IDENTIFIER=#{bundle_id}"
+    )
+
+    pilot(
+      api_key: api_key,
+      ipa: "build/ios/Notes.ipa",
+      skip_waiting_for_build_processing: true
+    )
+  end
+end
