@@ -40,7 +40,10 @@ export function ReminderCenter({ onClose }: { onClose: () => void }) {
   const save = (items: StoredReminder[]) => {
     setReminders(items)
     writeAllReminders(items)
-    items.forEach(scheduleStoredReminder)
+    items.forEach(item => {
+      if (item.done || !item.dueAt) void window.api.widgets.cancelReminder(item.id)
+      else scheduleStoredReminder(item)
+    })
   }
 
   const update = (id: string, patch: Partial<StoredReminder>) => {

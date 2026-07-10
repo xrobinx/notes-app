@@ -58,7 +58,7 @@ export interface ElectronAPI {
   widgets: {
     open: (type: 'widget' | 'today' | 'pinned' | 'quick' | 'checklist' | 'reminder' | 'all' | 'note' | 'todo') => Promise<void>
     loadNote: () => Promise<Note>
-    saveNote: (patch: { body: string; plainText: string }) => Promise<Note | null>
+    saveNote: (patch: { title?: string; body: string; plainText: string }) => Promise<Note | null>
     openNote: (noteId: string) => Promise<{ ok: boolean }>
     scheduleReminder: (reminder: { id: string; text: string; dueAt: string }) => Promise<{ ok: boolean; error?: string }>
     cancelReminder: (id: string) => Promise<{ ok: boolean }>

@@ -55,7 +55,7 @@ contextBridge.exposeInMainWorld('api', {
   widgets: {
     open: (type: 'widget' | 'today' | 'pinned' | 'quick' | 'checklist' | 'reminder' | 'all' | 'note' | 'todo') => ipcRenderer.invoke('widgets:open', type),
     loadNote: () => ipcRenderer.invoke('widgets:load-note'),
-    saveNote: (patch: { body: string; plainText: string }) => ipcRenderer.invoke('widgets:save-note', patch),
+    saveNote: (patch: { title?: string; body: string; plainText: string }) => ipcRenderer.invoke('widgets:save-note', patch),
     openNote: (noteId: string) => ipcRenderer.invoke('widgets:open-note', noteId),
     scheduleReminder: (reminder: { id: string; text: string; dueAt: string }) =>
       ipcRenderer.invoke('widgets:schedule-reminder', reminder),

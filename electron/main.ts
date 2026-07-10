@@ -23,9 +23,18 @@ const isWidgetStartupLaunch = process.argv.includes(WIDGET_STARTUP_ARG)
 let autoUpdatesStarted = false
 let autoSyncStarted = false
 const WIDGET_NOTE_ID_KEY = 'widgetNoteId'
+const WIDGET_REMINDERS_KEY = 'widgetReminders'
+const MAX_TIMER_DELAY = 2147483647
 
 type WidgetType = 'widget' | 'today' | 'pinned' | 'quick' | 'checklist' | 'reminder' | 'all' | 'note' | 'todo'
 const widgetTypes: WidgetType[] = ['widget', 'today', 'pinned', 'quick', 'checklist', 'reminder', 'all', 'note', 'todo']
+interface PersistedWidgetReminder {
+  id: string
+  text: string
+  dueAt: string
+  lastNotifiedAt?: string | null
+  done?: boolean
+}
 
 function levenshteinDistance(a: string, b: string): number {
   const source = a.toLowerCase()
@@ -82,6 +91,36 @@ function configureSpellchecker(): void {
       try { window.webContents.session.setSpellCheckerLanguages(['en-US']) } catch { /* ignore */ }
     }
   }
+}
+
+function readPersistedWidgetReminders(): PersistedWidgetReminder[] {
+  const reminders = getRawSetting<PersistedWidgetReminder[]>(WIDGET_REMINDERS_KEY)
+  if (!Array.isArray(reminders)) return []
+  return reminders.filter(reminder => {
+    const dueTime = new Date(reminder.dueAt).getTime()
+    return Boolean(reminder.id && reminder.text?.trim()) && !Number.isNaN(dueTime)
+  })
+}
+
+function writePersistedWidgetReminders(reminders: PersistedWidgetReminder[]): void {
+  setRawSetting(WIDGET_REMINDERS_KEY, reminders)
+}
+
+function upsertPersistedWidgetReminder(reminder: PersistedWidgetReminder): void {
+  const reminders = readPersistedWidgetReminders()
+    .filter(item => item.id !== reminder.id && !item.done)
+  writePersistedWidgetReminders([...reminders, reminder])
+}
+
+function removePersistedWidgetReminder(id: string): void {
+  writePersistedWidgetReminders(readPersistedWidgetReminders().filter(reminder => reminder.id !== id))
+}
+
+function markWidgetReminderNotified(id: string): void {
+  const now = new Date().toISOString()
+  writePersistedWidgetReminders(readPersistedWidgetReminders().map(reminder => (
+    reminder.id === id ? { ...reminder, lastNotifiedAt: now } : reminder
+  )))
 }
 
 function loadRenderer(window: BrowserWindow, widget?: WidgetType): void {
@@ -384,9 +423,10 @@ ipcMain.on('window:close-current', event => {
 ipcMain.handle('window:is-maximized', () => mainWindow?.isMaximized() ?? false)
 ipcMain.handle('widgets:open', (_event, type: WidgetType) => openWidget(type))
 ipcMain.handle('widgets:load-note', () => getOrCreateWidgetNote())
-ipcMain.handle('widgets:save-note', (_event, patch: { body: string; plainText: string }) => {
+ipcMain.handle('widgets:save-note', (_event, patch: { title?: string; body: string; plainText: string }) => {
   const note = getOrCreateWidgetNote()
   notesRepo.updateNote(note.id, {
+    title: patch.title?.trim() || note.title || 'Note Title',
     body: patch.body,
     plainText: patch.plainText,
   })
@@ -408,38 +448,86 @@ ipcMain.handle('widgets:open-note', (_event, noteId: string) => {
 })
 ipcMain.handle('language:refresh-spellchecker', () => configureSpellchecker())
 function showReminderNotification(reminder: { id: string; text: string }): void {
-  new Notification({
-    title: 'Notes reminder',
-    body: reminder.text,
-    icon: join(__dirname, '../../resources/icon.ico'),
-  }).show()
+  const icon = join(__dirname, '../../resources/icon.ico')
+  if (Notification.isSupported()) {
+    const notification = new Notification({
+      title: 'Notes reminder',
+      body: reminder.text,
+      icon,
+    })
+    notification.on('click', () => showMainWindow())
+    notification.show()
+  } else {
+    try {
+      tray?.displayBalloon({
+        title: 'Notes reminder',
+        content: reminder.text,
+        icon: nativeImage.createFromPath(icon),
+      })
+    } catch {
+      // Windows notifications are best effort and can be blocked by system settings.
+    }
+  }
   for (const window of BrowserWindow.getAllWindows()) {
     window.webContents.send('widgets:reminder-fired', reminder.id)
   }
 }
 
-ipcMain.handle('widgets:schedule-reminder', (_event, reminder: { id: string; text: string; dueAt: string }) => {
-  const dueTime = new Date(reminder.dueAt).getTime()
-  const delay = dueTime - Date.now()
-  if (!reminder.text.trim() || Number.isNaN(dueTime)) {
-    return { ok: false, error: 'Choose a future date and time.' }
-  }
-  if (reminderTimers.has(reminder.id)) clearTimeout(reminderTimers.get(reminder.id)!)
-  if (delay <= 0) {
-    showReminderNotification(reminder)
-    return { ok: true }
-  }
-  const timer = setTimeout(() => {
-    showReminderNotification(reminder)
-    reminderTimers.delete(reminder.id)
-  }, Math.min(delay, 2147483647))
-  reminderTimers.set(reminder.id, timer)
-  return { ok: true }
-})
-ipcMain.handle('widgets:cancel-reminder', (_event, id: string) => {
+function clearWidgetReminderTimer(id: string): void {
   const timer = reminderTimers.get(id)
   if (timer) clearTimeout(timer)
   reminderTimers.delete(id)
+}
+
+function scheduleWidgetReminderTimer(reminder: PersistedWidgetReminder): void {
+  const dueTime = new Date(reminder.dueAt).getTime()
+  const delay = dueTime - Date.now()
+  clearWidgetReminderTimer(reminder.id)
+  if (reminder.done || Number.isNaN(dueTime)) return
+  if (delay <= 0) {
+    if (reminder.lastNotifiedAt) return
+    showReminderNotification(reminder)
+    markWidgetReminderNotified(reminder.id)
+    return
+  }
+  const timer = setTimeout(() => {
+    if (dueTime - Date.now() > 0) {
+      scheduleWidgetReminderTimer(reminder)
+      return
+    }
+    showReminderNotification(reminder)
+    markWidgetReminderNotified(reminder.id)
+    reminderTimers.delete(reminder.id)
+  }, Math.min(delay, MAX_TIMER_DELAY))
+  reminderTimers.set(reminder.id, timer)
+}
+
+function restoreWidgetReminderTimers(): void {
+  for (const reminder of readPersistedWidgetReminders()) {
+    scheduleWidgetReminderTimer(reminder)
+  }
+}
+
+ipcMain.handle('widgets:schedule-reminder', (_event, reminder: { id: string; text: string; dueAt: string }) => {
+  const dueTime = new Date(reminder.dueAt).getTime()
+  if (!reminder.text.trim() || Number.isNaN(dueTime)) {
+    return { ok: false, error: 'Choose a valid date and time.' }
+  }
+  const existing = readPersistedWidgetReminders().find(item => item.id === reminder.id)
+  const persisted = {
+    id: reminder.id,
+    text: reminder.text.trim(),
+    dueAt: reminder.dueAt,
+    done: false,
+    lastNotifiedAt: existing?.dueAt === reminder.dueAt ? existing.lastNotifiedAt ?? null : null,
+  }
+  upsertPersistedWidgetReminder(persisted)
+  scheduleWidgetReminderTimer(persisted)
+  return { ok: true }
+})
+ipcMain.handle('widgets:cancel-reminder', (_event, id: string) => {
+  clearWidgetReminderTimer(id)
+  removePersistedWidgetReminder(id)
   return { ok: true }
 })
 
@@ -459,6 +547,7 @@ app.whenReady().then(() => {
 
   createTray()
   syncWidgetLoginSetting()
+  restoreWidgetReminderTimers()
 
   if (isWidgetStartupLaunch) {
     openWidget('widget')

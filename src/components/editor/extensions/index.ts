@@ -51,6 +51,49 @@ const CustomTableHeader = TableHeader.extend({
   },
 })
 
+const CustomTaskItem = TaskItem.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      daily: {
+        default: false,
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-daily') === 'true',
+        renderHTML: (attributes: { daily?: boolean }) => (
+          attributes.daily ? { 'data-daily': 'true' } : {}
+        ),
+      },
+      priority: {
+        default: false,
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-priority') === 'true',
+        renderHTML: (attributes: { priority?: boolean }) => (
+          attributes.priority ? { 'data-priority': 'true' } : {}
+        ),
+      },
+      streak: {
+        default: 0,
+        parseHTML: (element: HTMLElement) => Number(element.getAttribute('data-streak') ?? 0),
+        renderHTML: (attributes: { streak?: number }) => (
+          attributes.streak ? { 'data-streak': String(attributes.streak) } : {}
+        ),
+      },
+      lastCompletedDate: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-last-completed-date'),
+        renderHTML: (attributes: { lastCompletedDate?: string | null }) => (
+          attributes.lastCompletedDate ? { 'data-last-completed-date': attributes.lastCompletedDate } : {}
+        ),
+      },
+      lastResetDate: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-last-reset-date'),
+        renderHTML: (attributes: { lastResetDate?: string | null }) => (
+          attributes.lastResetDate ? { 'data-last-reset-date': attributes.lastResetDate } : {}
+        ),
+      },
+    }
+  },
+})
+
 export const editorExtensions = [
   StarterKit.configure({
     codeBlock: false, // replaced by CodeBlockLowlight
@@ -60,7 +103,7 @@ export const editorExtensions = [
   Color,
   Underline,
   TaskList,
-  TaskItem.configure({ nested: true }),
+  CustomTaskItem.configure({ nested: true }),
   Table.configure({ resizable: false }),
   TableRow,
   CustomTableHeader,
